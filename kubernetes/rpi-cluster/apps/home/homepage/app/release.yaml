@@ -60,13 +60,6 @@ spec:
       create: true
       name: homepage
 
-    # Expose on port 3030
-    service:
-      main:
-        ports:
-          http:
-            port: 3030
-
     # This enables the service account to access the necessary resources
     enableRbac: true
 
