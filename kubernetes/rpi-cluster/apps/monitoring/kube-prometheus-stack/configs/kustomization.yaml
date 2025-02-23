@@ -9,18 +9,10 @@ configMapGenerator:
       - dashboards/control-plane.json
       - dashboards/cluster.json
       - dashboards/logs.json
+      - dashboards/k8s-cluster.json
     options:
       labels:
         grafana_dashboard: "1"
         app.kubernetes.io/part-of: flux
-        app.kubernetes.io/component: monitoring
-        kustomize.toolkit.fluxcd.io/substitute: disabled
-  - name: k8s-cluster-grafana-dashboards
-    files:
-      - dashboards/k8s-cluster.json
-    options:
-      labels:
-        grafana_dashboard: "2"
-        #app.kubernetes.io/part-of: flux
         app.kubernetes.io/component: monitoring
         kustomize.toolkit.fluxcd.io/substitute: disabled
