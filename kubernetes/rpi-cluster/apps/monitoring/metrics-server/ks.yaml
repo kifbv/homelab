@@ -8,7 +8,7 @@ spec:
   dependsOn:
   - name: kube-prometheus-controllers
   interval: 1h0m0s
-  path: ./kubernetes/rpi-cluster/apps/monitoring/metrics-server/app/kustomization.yaml
+  path: ./kubernetes/rpi-cluster/apps/monitoring/metrics-server/app
   prune: true
   sourceRef:
     kind: GitRepository
