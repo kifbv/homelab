@@ -13,3 +13,8 @@ spec:
         name: metrics-server
       version: 3.12.x
   interval: 1m0s
+  values:
+    metrics:
+      enabled: true
+    serviceMonitor:
+      enabled: true
