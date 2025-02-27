@@ -3,4 +3,4 @@ kind: Kustomization
 namespace: monitoring
 resources:
   - repository.yaml
-  - release.yaml
+  #- release.yaml
