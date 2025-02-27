@@ -1,0 +1,15 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: OCIRepository
+metadata:
+  name: loki
+  namespace: flux-system
+spec:
+  interval: 1h0m0s
+  provider: generic
+  ref:
+    semver: 5.x
+  url: oci://registry-1.docker.io/bitnamicharts/loki
+  layerSelector:
+    mediaType: "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
+    operation: copy
