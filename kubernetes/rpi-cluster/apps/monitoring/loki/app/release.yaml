@@ -10,7 +10,7 @@ spec:
     spec:
       chart: loki
       sourceRef:
-        kind: OCIRepository
+        kind: HelmRepository
         name: loki
         namespace: flux-system
   install:
