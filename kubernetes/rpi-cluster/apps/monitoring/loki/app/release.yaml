@@ -9,9 +9,10 @@ spec:
   chart:
     spec:
       chart: loki
+      version: "^5.0.0"
       sourceRef:
         kind: HelmRepository
-        name: loki
+        name: grafana
         namespace: flux-system
   install:
     remediation:
@@ -20,16 +21,16 @@ spec:
     remediation:
       retries: 3
   values:
-    loki:
-      auth_enabled: false
-      storage:
-        type: filesystem
-        filesystem:
-          chunks_directory: /data/loki/chunks
-          rules_directory: /data/loki/rules
-      retention:
-        time: 24h
-      resources:
-        requests:
-          cpu: 100m
-          memory: 200Mi
+    singleBinary:
+      replicas: 1
+    storage:
+      type: filesystem
+    minio:
+      enabled: false
+    persistence:
+      enabled: true
+      size: 10Gi
+    resources:
+      requests:
+        cpu: 100m
+        memory: 200Mi
