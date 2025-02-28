@@ -5,8 +5,8 @@ metadata:
   name: metrics-server
   namespace: flux-system
 spec:
-  dependsOn:
-  - name: kube-prometheus-controllers
+  #dependsOn:
+  #- name: kube-prometheus-controllers
   interval: 1h0m0s
   path: ./kubernetes/rpi-cluster/apps/monitoring/metrics-server/app
   prune: true
