@@ -1,0 +1,15 @@
+name: "build image"
+on:
+  workflow_dispatch:
+jobs:
+  build-armbian:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: armbian/build@main
+        with:
+          armbian_token:   "${{ secrets.GITHUB_TOKEN }}" # GitHub token
+          armbian_release: "bookworm"
+          armbian_ui:      "minimal"
+          armbian_target:  "build"
+          armbian_board:   "rpi4b" # good for rpi4b and rpi5b
+          #armbian_extensions: "cloud-init" # include cloud-init config
