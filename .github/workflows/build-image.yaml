@@ -1,4 +1,4 @@
-name: "Build rpi5 Armbian image"
+name: "Build Armbian Image"
 on:
   workflow_dispatch:
 jobs:
@@ -12,5 +12,5 @@ jobs:
           armbian_ui:             "minimal"
           armbian_target:         "build"
           armbian_board:          "rpi4b" # good for rpi4b and rpi5b
-          #armbian_release_tittle: "rpi5 armbian image"
+          armbian_release_tittle: "rpi5 armbian image"
           #armbian_extensions: "cloud-init" # include cloud-init config
