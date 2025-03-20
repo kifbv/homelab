@@ -7,9 +7,10 @@ jobs:
     steps:
       - uses: armbian/build@main
         with:
-          armbian_token:   "${{ secrets.GITHUB_TOKEN }}" # GitHub token
-          armbian_release: "bookworm"
-          armbian_ui:      "minimal"
-          armbian_target:  "build"
-          armbian_board:   "rpi4b" # good for rpi4b and rpi5b
+          armbian_token:         "${{ secrets.GITHUB_TOKEN }}" # GitHub token
+          armbian_release:       "bookworm"
+          armbian_ui:            "minimal"
+          armbian_target:        "build"
+          armbian_board:         "rpi4b" # good for rpi4b and rpi5b
+          armbian_release_title: "rpi5 armbian image"
           #armbian_extensions: "cloud-init" # include cloud-init config
