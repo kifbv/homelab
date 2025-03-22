@@ -1,4 +1,4 @@
-name: "build image"
+name: "Build Armbian Image"
 on:
   workflow_dispatch:
 jobs:
