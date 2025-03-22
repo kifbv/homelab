@@ -112,5 +112,35 @@ AllowUsers pi
 EOF
 log "SSH security configured"
 
+# ===== K8S SETUP =====
+# Copy and install systemd service unit
+cp /tmp/overlay/k8s-firstboot.service /usr/lib/systemd/system/
+ln -s /usr/lib/systemd/system/k8s-firstboot.service /etc/systemd/system/multi-user.target.wants/k8s-firstboot.service
+
+# Create token for both controlplane and node
+TOKEN=$(tr -dc 'a-f0-9' < /dev/urandom | head -c 6).$(tr -dc 'a-f0-9' < /dev/urandom | head -c 16)
+
+# Create bootstrap script
+cat <<-EOF> /usr/bin/k8s-firstboot.sh
+# k8s install script
+#!/bin/bash
+
+# just to be sure everything else is set up
+sleep 5
+
+# run kubeadm init for controlplane or kubeadm join for nodes
+# based on the hostname
+# todo: config file instead of arguments + serverTLSBootstrap: true
+HOST_TYPE="\$(cat /etc/hostname)"
+if [[ \${HOST_TYPE%%[0-9]*} = controlplane ]]; then
+    kubeadm init --control-plane-endpoint=cluster-endpoint \
+	    --token=$TOKEN
+else
+    kubeadm join --control-plane-endpoint=cluster-endpoint \
+	    --discovery-token-unsafe-skip-ca-verification \
+	    --token=$TOKEN
+fi
+EOF
+
 # ===== COMPLETION =====
 log "Image customization completed successfully"

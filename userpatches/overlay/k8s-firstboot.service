@@ -1,0 +1,10 @@
+[Unit]
+Description=Install kubernetes at first boot
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/k8s-firstboot.sh
+
+[Install]
+WantedBy=multi-user.target
+
