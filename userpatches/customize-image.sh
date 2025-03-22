@@ -142,5 +142,8 @@ else
 fi
 EOF
 
+# Make bootstrap script executable
+chmod 755 /usr/bin/k8s-firstboot.sh
+
 # ===== COMPLETION =====
 log "Image customization completed successfully"
