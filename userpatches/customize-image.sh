@@ -118,14 +118,19 @@ cp /tmp/overlay/k8s-firstboot.service /usr/lib/systemd/system/
 ln -s /usr/lib/systemd/system/k8s-firstboot.service /etc/systemd/system/multi-user.target.wants/k8s-firstboot.service
 
 # Create token for both controlplane and node
-TOKEN=$(tr -dc 'a-f0-9' < /dev/urandom | head -c 6).$(tr -dc 'a-f0-9' < /dev/urandom | head -c 16)
+#TOKEN=$(tr -dc 'a-f0-9' < /dev/urandom | head -c 6).$(tr -dc 'a-f0-9' < /dev/urandom | head -c 16)
 
 # Create bootstrap script
+# Could be in configure-image.sh script but simpler to leave it 
+# with the systemd service unit installation instructions
 cat <<-EOF> /usr/bin/k8s-firstboot.sh
+#!/usr/bin/bash
 # k8s install script
-#!/bin/bash
+# for some reason i don't understand, both /bin/bash and /usr/bin/bash are bash v5.x
+# but only the later knows about [[ which makes me think dash is used instead which
+# means the shebang has to be as above
 
-# just to be sure everything else is set up
+echo "Sleep 5s just to be sure everything else is set up"
 sleep 5
 
 # run kubeadm init for controlplane or kubeadm join for nodes
@@ -133,13 +138,16 @@ sleep 5
 # todo: config file instead of arguments + serverTLSBootstrap: true
 HOST_TYPE="\$(cat /etc/hostname)"
 if [[ \${HOST_TYPE%%[0-9]*} = controlplane ]]; then
-    kubeadm init --control-plane-endpoint=cluster-endpoint \
-	    --token=$TOKEN
+    echo "This is a controlplane node"
+    kubeadm init --skip-phases=addon/kube-proxy --service-cidr 10.100.0.0/16
 else
-    kubeadm join --control-plane-endpoint=cluster-endpoint \
-	    --discovery-token-unsafe-skip-ca-verification \
-	    --token=$TOKEN
+    echo "This is a worker node, not doing anything at the moment"
+    exit 0
 fi
+
+# copy config files to pi user home dir
+cp /etc/kubernetes/admin.conf /home/pi/.kube/config
+chown \$(id -u pi):\$(id -g pi) /home/pi/.kube/config
 EOF
 
 # Make bootstrap script executable
