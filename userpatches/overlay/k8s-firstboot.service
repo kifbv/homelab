@@ -7,7 +7,7 @@ Requires=kubelet.service
 Type=oneshot
 ExecStart=/usr/bin/k8s-firstboot.sh
 RemainAfterExit=yes
-TimeoutStopSec=300
+TimeoutStartSec=300
 
 [Install]
 WantedBy=multi-user.target
