@@ -62,8 +62,8 @@ echo "Modifying image: $IMAGE_FILE"
 
 # Find partitions in the image
 PARTINFO=$(fdisk -l "$IMAGE_FILE")
-ROOTFS_START=$(echo "$PARTINFO" | grep -E "Linux$" | head -1 | awk '{print $2}')
-SECTOR_SIZE=$(echo "$PARTINFO" | grep "Sector size" | awk '{print $4}')
+ROOTFS_START=$(echo "$PARTINFO" | grep -E "Linux$" | tr -s ' ' | cut -f2 -d' ')
+SECTOR_SIZE=$(echo "$PARTINFO" | grep -E '^Sector size.*bytes' | tr -s ' ' | cut -f4 -d ' ')
 
 if [[ -z "$ROOTFS_START" ]] || [[ -z "$SECTOR_SIZE" ]]; then
     echo "Error: Could not determine root partition information" >&2
@@ -89,7 +89,9 @@ echo "$NEW_HOSTNAME" > "$MOUNT_DIR/etc/hostname"
 sed -i "s/127.0.1.1.*/127.0.1.1\t$NEW_HOSTNAME/" "$MOUNT_DIR/etc/hosts"
 
 echo "Configuring SSH key and .kube dir..."
-mkdir -p -m 700 "$MOUNT_DIR/home/pi/{.ssh,.kube}"
+#mkdir -p -m 700 "$MOUNT_DIR/home/pi/.{ssh,kube}"
+mkdir -p -m 700 "$MOUNT_DIR/home/pi/.ssh"
+mkdir -p -m 700 "$MOUNT_DIR/home/pi/.kube"
 cat "$SSH_KEY_FILE" > "$MOUNT_DIR/home/pi/.ssh/authorized_keys"
 chmod 600 "$MOUNT_DIR/home/pi/.ssh/authorized_keys"
 
@@ -109,6 +111,40 @@ fi
 # Add password for pi user
 echo "pi:$PASSWD" | chpasswd -P "$MOUNT_DIR"
 
+# Create bootstrap script
+cat <<-EOF> "$MOUNT_DIR/usr/bin/k8s-firstboot.sh"
+#!/usr/bin/bash
+# k8s install script
+# for some reason i don't understand, both /bin/bash and /usr/bin/bash are bash v5.x
+# but only the later knows about [[ which makes me think dash is used instead which
+# means the shebang has to be as above
+
+echo "Sleep 5s just to be sure everything else is set up"
+sleep 5
+
+# run kubeadm init for controlplane or kubeadm join for nodes
+# based on the hostname
+# todo: config file instead of arguments + serverTLSBootstrap: true
+HOST_TYPE="\$(cat /etc/hostname)"
+if [[ \${HOST_TYPE%%[0-9]*} = controlplane ]]; then
+    echo "This is a controlplane node"
+    kubeadm init --skip-phases=addon/kube-proxy --service-cidr 10.100.0.0/16
+else
+    echo "This is a worker node, not doing anything at the moment"
+    exit 0
+fi
+
+# copy config files to pi user home dir
+cp /etc/kubernetes/admin.conf /home/pi/.kube/config
+chown \$(id -u pi):\$(id -g pi) /home/pi/.kube/config
+
+# disable service to avoid issue in case of reboot
+systemctl disable k8s-firstboot.service --now
+EOF
+
+# Make bootstrap script executable
+chmod 755 "$MOUNT_DIR/usr/bin/k8s-firstboot.sh"
+
 # Verify actions
 SSH_KEY_VERIFIED="$(cat $MOUNT_DIR/home/pi/.ssh/authorized_keys)"
 HOSTNAME_VERIFIED="$(cat $MOUNT_DIR/etc/hostname)"
@@ -122,4 +158,4 @@ rmdir "$MOUNT_DIR"
 echo -e "\nDone! Image $IMAGE_FILE has been modified:"
 echo -e "\tHostname=$HOSTNAME_VERIFIED\n\tSSHKey=$SSH_KEY_VERIFIED"
 echo -e "\nYou can now burn this image to an SD card with e.g.:
-dd bs=4M conv=fsync oflag=direct status=progress \\ \n\tif=$1 \\ \n\tof=/dev/<your_sdcard>"
+sudo dd bs=4M conv=fsync oflag=direct status=progress if=$1 of=/dev/<your_sdcard>"
