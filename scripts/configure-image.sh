@@ -88,8 +88,8 @@ echo "Configuring hostname..."
 echo "$NEW_HOSTNAME" > "$MOUNT_DIR/etc/hostname"
 sed -i "s/127.0.1.1.*/127.0.1.1\t$NEW_HOSTNAME/" "$MOUNT_DIR/etc/hosts"
 
-echo "Configuring SSH key..."
-mkdir -p -m 700 "$MOUNT_DIR/home/pi/.ssh"
+echo "Configuring SSH key and .kube dir..."
+mkdir -p -m 700 "$MOUNT_DIR/home/pi/{.ssh,.kube}"
 cat "$SSH_KEY_FILE" > "$MOUNT_DIR/home/pi/.ssh/authorized_keys"
 chmod 600 "$MOUNT_DIR/home/pi/.ssh/authorized_keys"
 
@@ -99,10 +99,10 @@ PI_UID=$(grep "^pi:" "$MOUNT_DIR/etc/passwd" | cut -d: -f3)
 PI_GID=$(grep "^pi:" "$MOUNT_DIR/etc/passwd" | cut -d: -f4)
 
 if [ -n "$PI_UID" ] && [ -n "$PI_GID" ]; then
-    chown -R "${PI_UID}:${PI_GID}" "$MOUNT_DIR/home/pi/.ssh"
+    chown -R "${PI_UID}:${PI_GID}" "$MOUNT_DIR/home/pi"
 else
     # Fallback to common values
-    chown -R 1000:1000 "$MOUNT_DIR/home/pi/.ssh"
+    chown -R 1000:1000 "$MOUNT_DIR/home/pi"
     echo "Warning: Could not determine pi user IDs, using default 1000:1000"
 fi
 

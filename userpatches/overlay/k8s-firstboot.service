@@ -1,5 +1,7 @@
 [Unit]
 Description=Install kubernetes at first boot
+After=kubelet.service
+Requires=kubelet.service
 
 [Service]
 Type=oneshot
