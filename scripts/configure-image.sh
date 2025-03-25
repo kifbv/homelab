@@ -111,6 +111,20 @@ fi
 # Add password for pi user
 echo "pi:$PASSWD" | chpasswd -P "$MOUNT_DIR"
 
+# Create systemd service unit
+cat <<EOF> "$MOUNT_DIR/usr/lib/systemd/system/k8s-firstboot.service"
+[Unit]
+Description=Install kubernetes at first boot
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/k8s-firstboot.sh
+RemainAfterExit=true
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
 # Create bootstrap script
 cat <<-EOF> "$MOUNT_DIR/usr/bin/k8s-firstboot.sh"
 #!/usr/bin/bash
@@ -123,12 +137,15 @@ echo "Sleep 5s just to be sure everything else is set up"
 sleep 5
 
 # run kubeadm init for controlplane or kubeadm join for nodes
-# based on the hostname
+# based on the hostname and using the token created by customize-image.sh
 # todo: config file instead of arguments + serverTLSBootstrap: true
+TOKEN="\$(cat /root/kubeadm-init-token)"
+CERT_KEY="\$(cat /root/kubeadm-cert-key)"
 HOST_TYPE="\$(cat /etc/hostname)"
 if [[ \${HOST_TYPE%%[0-9]*} = controlplane ]]; then
     echo "This is a controlplane node"
-    kubeadm init --skip-phases=addon/kube-proxy --service-cidr 10.100.0.0/16
+    # /20=4k services /18=16k pods
+    kubeadm init --skip-phases=addon/kube-proxy --service-cidr 10.244.0.0/20 --pod-network-cidr=10.244.64.0/18 --token=\$TOKEN --control-plane-endpoint=controlplane --upload-certs --certificate-key=\$CERT_KEY
 else
     echo "This is a worker node, not doing anything at the moment"
     exit 0

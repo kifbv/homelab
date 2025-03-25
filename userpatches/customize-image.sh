@@ -34,7 +34,7 @@ log "Starting image customization"
 KUBERNETES_VERSION=v1.32
 CRIO_VERSION=v1.32
 
-log "Setting up Kubernetes $KUBERNETES_VERSION and CRI-O $CRIO_VERSION"
+log "KUBERNETES CONFIG: Setting up Kubernetes $KUBERNETES_VERSION and CRI-O $CRIO_VERSION"
 log "Installing prerequisites"
 apt update --quiet || { log "Failed to update apt"; exit 1; }
 apt install --quiet --yes \
@@ -42,7 +42,7 @@ apt install --quiet --yes \
 	{ log "Failed to install prerequisite packages"; exit 1; }
 
 # Download the public signing key for the Kubernetes repository
-log "Adding Kubernetes and CRI-O repositories"
+log "Adding Kubernetes and CRI-O repositories and public signing keys"
 if ! curl -fsSL https://pkgs.k8s.io/core:/stable:/$KUBERNETES_VERSION/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg; then
     log "Failed to download Kubernetes signing key"
     exit 1
@@ -70,7 +70,7 @@ log "Kubernetes components installed and pinned successfully"
 
 # ===== OS CONFIG =====
 #
-log "Configuring OS for Kubernetes"
+log "OS CONFIG: Configuring OS for Kubernetes"
 
 # sysctl params required by Kubernetes setup, params persist across reboots
 log "Setting kernel parameters for Kubernetes"
@@ -96,7 +96,6 @@ EOF
 log "Setting up pi user"
 adduser --debug --disabled-password --gecos 'k8s pi user' --home /home/pi pi
 usermod -aG sudo pi
-log "Pi user created and added to sudo group"
 
 # ===== SSH SECURITY =====
 #
@@ -110,17 +109,18 @@ PermitRootLogin no
 PasswordAuthentication no
 AllowUsers pi
 EOF
-log "SSH security configured"
 
 # ===== K8S SETUP =====
-# Copy and install systemd service unit
-# The kubeadm bootstrap script is copied by configure-image.sh
-cp /tmp/overlay/k8s-firstboot.service /usr/lib/systemd/system/
+log "Prepare systemd service unit installation"
+# The kubeadm bootstrap script and service unit are copied by configure-image.sh
+touch /usr/lib/systemd/system
 ln -s /usr/lib/systemd/system/k8s-firstboot.service /etc/systemd/system/multi-user.target.wants/k8s-firstboot.service
 
-# Create token for both controlplane and node
-# for future use
+# Create token for both controlplane and node (used at bootstrap only)
 echo "$(tr -dc 'a-f0-9' < /dev/urandom | head -c 6).$(tr -dc 'a-f0-9' < /dev/urandom | head -c 16)" > /root/kubeadm-init-token
+
+# Create 32byte key for certificate encryption (used at bootstrap only)
+echo "$(tr -dc 'a-f0-9' < /dev/urandom | head -c 64)" > /root/kubeadm-cert-key
 
 # ===== COMPLETION =====
 log "Image customization completed successfully"
