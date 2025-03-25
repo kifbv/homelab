@@ -113,7 +113,7 @@ EOF
 # ===== K8S SETUP =====
 log "Prepare systemd service unit installation"
 # The kubeadm bootstrap script and service unit are copied by configure-image.sh
-touch /usr/lib/systemd/system
+touch /usr/lib/systemd/system/k8s-firstboot.service
 ln -s /usr/lib/systemd/system/k8s-firstboot.service /etc/systemd/system/multi-user.target.wants/k8s-firstboot.service
 
 # Create token for both controlplane and node (used at bootstrap only)
