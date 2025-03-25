@@ -86,7 +86,7 @@ This creates and store an age key in the default location where sops is expectin
 
 1. Add sops config file at root of repo in `.sops.yaml`:
 ```bash
-cat <<-EOF> $(git rev-parse --show-toplevel).sops.yaml
+cat <<-EOF> $(git rev-parse --show-toplevel)/.sops.yaml
 creation_rules:
   - path_regex: .*.yaml
     encrypted_regex: '(^data|stringData)$'
