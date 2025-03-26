@@ -19,7 +19,7 @@ Kubernetes homelab on Raspberry Pi 5
 
 ### Create the cluster
 
-1. Build the Raspberry Pi image
+1. **Build the Raspberry Pi image**
 
 For this, run the `Build Armbian Image` workflow.
 
@@ -31,7 +31,7 @@ I am using a slightly modified version of the original workflow, with the follow
   - `CONSOLE_AUTOLOGIN=no` to avoid automatically login as root for local consoles at first run.
   - `EXTRAWIFI=no` to not include extra wifi drivers.
 
-2. Configure the Raspberry Pi image(s)
+2. **Configure the Raspberry Pi image**
 
 Before burning the image to the target storage, it needs to be configured for the target node (i.e. controlplane, node01, node02...).
 
@@ -39,7 +39,7 @@ This is done with the `configure-image.sh` script and is similar to what can be 
 
 Run that script with `sudo configure-image.sh to see the usage.
 
-3. Boot your Pi
+3. **Boot your Pi**
 
 The previous script will give you the command to run (you will find the path to your device with e.g. `lsblk`).
 
@@ -47,7 +47,7 @@ Once the medium is ready, connect it to your Pi, plug it into your switch and po
 
 Each Pi will boot and execute specific commands in order to init or join a cluster. This is done with some systemd services running at boot time (see `scripts/configure-image.sh`).
 
-4. Update your router's config
+4. **Update your router's config**
 
 After the `controlplane` node has booted, quickly add a DHCP reservation for it with the name `controlplane`. Hurry up, you have 4 minutes until `kubeadm` aborts the installation.
 
@@ -56,7 +56,7 @@ This DHCP reservation is required because we passed the `--control-plane-endpoin
 _TODO: add logic for workers and subsequent controlplanes_
 _TODO: add cilium install script_
 
-5. Add other nodes to the cluster
+5. **Add other nodes to the cluster**
 
 You can now add extra nodes by repeating steps 2 and 3 above.
 
@@ -73,13 +73,13 @@ Before bootstrapping flux we need to set the stage for storing secrets inside th
 
 Other solutions include Hashicorp Vault, Azure Key Vaults, AWS KMS, etc but this simpler and good enough for me.
 
-1. Create a key pair for encrypting secrets:
+1. **Create a key pair for encrypting secrets**
 
 `mkdir -p ~/.config/sops/age && age-keygen -o ~/.config/sops/age/key.txt`
 
 This creates and store an age key in the default location where sops is expecting it.
 
-2. Add sops config file at root of repo in `.sops.yaml`:
+2. **Add sops config file at root of repo in `.sops.yaml`**
 
 ```bash
 cat <<-EOF> $(git rev-parse --show-toplevel)/.sops.yaml
@@ -90,7 +90,7 @@ creation_rules:
 EOF
 ```
 
-3. Store the age private key in a Kubernetes secret for flux to use when decrypting secrets before sending them to Kubernetes:
+3. **Store the age private key in a Kubernetes secret for flux to use when decrypting secrets before sending them to Kubernetes**
 
 ```bash
 kubectl create secret generic sops-age \
@@ -100,9 +100,9 @@ kubectl create secret generic sops-age \
 
 ### Bootstrap Flux
 
-1. create a github pat token with the following repo rights: admin (RW), contents (RW)
+1. **Create a github pat token with the following repo rights: admin (RW), contents (RW)**
 
-2. bootstrap flux (it will ask for the token):
+2. **Bootstrap flux (it will ask for the token)**
 
 ```bash
 flux bootstrap github  \
