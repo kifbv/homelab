@@ -1,13 +1,16 @@
 name: "Build Armbian Image"
 on:
   workflow_dispatch:
+permissions:
+  # write access required to create a release with the resulting image
+  contents: write
 jobs:
   build-armbian:
     runs-on: ubuntu-latest
     steps:
       - uses: kifbv/build@main
         with:
-          armbian_token:          "${{ secrets.GITHUB_TOKEN }}" # GitHub token
+          armbian_token:          "${{ secrets.GITHUB_TOKEN }}"
           armbian_release:        "bookworm"
           armbian_ui:             "minimal"
           armbian_target:         "build"
