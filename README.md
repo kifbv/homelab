@@ -36,14 +36,6 @@ Read these instructions multiple times and you will realise that there are reall
 
 ### Create the cluster
 
-1. Give permissions to Github Actions to write to your repo
-
-This is needed for the workflow to write the create releases in your repo.
-
-Go to: `Settings>Actions>General>Workflow permissions:Read and write permissions`
-
-_TODO: add permission contents: write to the workflow directly_
-
 1. Build the Raspberry Pi image
 
 For this, run the `Build Armbian Image` workflow.
