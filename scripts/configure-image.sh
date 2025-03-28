@@ -133,30 +133,65 @@ cat <<-EOF> "$MOUNT_DIR/usr/bin/k8s-firstboot.sh"
 # but only the later knows about [[ which makes me think dash is used instead which
 # means the shebang has to be as above
 
-echo "Sleep 5s just to be sure everything else is set up"
-sleep 5
-
 # run kubeadm init for controlplane or kubeadm join for nodes
 # based on the hostname and using the token created by customize-image.sh
 # todo: config file instead of arguments + serverTLSBootstrap: true
+
+# functions
+log() {
+	echo "[\$(date '+%Y-%m-%d %H:%M:%S')] \$1" | tee -a /var/log/customize-image.log
+}
+
+setup_first_controlplane() {
+	log "This is the first controlplane"
+	kubeadm init --skip-phases=addon/kube-proxy --service-cidr 10.244.0.0/20 --pod-network-cidr=10.244.64.0/18 --token=\$TOKEN --control-plane-endpoint=\$HOST_IP --upload-certs --certificate-key=\$CERT_KEY
+}
+
+setup_next_controlplane() {
+	log "This is an extra controlplane"
+	kubeadm join
+}
+
+setup_worker_node() {
+	log "This is a worker node"
+	kubeadm join
+}
+	
+setup_pi_kubeconfig() {
+	log "Copy config files to pi user home dir"
+	cp /etc/kubernetes/admin.conf /home/pi/.kube/config
+	chown \$(id -u pi):\$(id -g pi) /home/pi/.kube/config
+}
+
+cleanup_actions() {
+	log "Disable service to avoid issue in case of reboot"
+	systemctl disable k8s-firstboot.service --now
+}
+
+# business
+log "Sleep 5s just to be sure everything else is set up"
+sleep 5
+
+log "Retrieving configuration values"
 TOKEN="\$(cat /root/kubeadm-init-token)"
 CERT_KEY="\$(cat /root/kubeadm-cert-key)"
 HOST_TYPE="\$(cat /etc/hostname)"
-if [[ \${HOST_TYPE%%[0-9]*} = controlplane ]]; then
-    echo "This is a controlplane node"
-    # /20=4k services /18=16k pods
-    kubeadm init --skip-phases=addon/kube-proxy --service-cidr 10.244.0.0/20 --pod-network-cidr=10.244.64.0/18 --token=\$TOKEN --control-plane-endpoint=controlplane --upload-certs --certificate-key=\$CERT_KEY
-else
-    echo "This is a worker node, not doing anything at the moment"
-    exit 0
-fi
+HOST_IP="\$(ip -4 -o addr show end0 | tr -s ' ' | cut -f4 -d' ' | cut -f1 -d/)"
 
-# copy config files to pi user home dir
-cp /etc/kubernetes/admin.conf /home/pi/.kube/config
-chown \$(id -u pi):\$(id -g pi) /home/pi/.kube/config
+case HOST_TYPE in
+	controlplane)
+		setup_first_controlplane
+		setup_pi_kubeconfig
+		;;
+	controlplane*)
+		setup_next_controlplane
+		;;
+	node*)
+		setup_worker_node
+		;;
+esac
 
-# disable service to avoid issue in case of reboot
-systemctl disable k8s-firstboot.service --now
+cleanup_actions
 EOF
 
 # Make bootstrap script executable
