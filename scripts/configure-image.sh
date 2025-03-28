@@ -178,7 +178,7 @@ CERT_KEY="\$(cat /root/kubeadm-cert-key)"
 HOST_TYPE="\$(cat /etc/hostname)"
 HOST_IP="\$(ip -4 -o addr show end0 | tr -s ' ' | cut -f4 -d' ' | cut -f1 -d/)"
 
-case HOST_TYPE in
+case \$HOST_TYPE in
 	controlplane)
 		setup_first_controlplane
 		setup_pi_kubeconfig
