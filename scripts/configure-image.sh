@@ -137,9 +137,14 @@ cat <<-EOF> "$MOUNT_DIR/usr/bin/k8s-firstboot.sh"
 # based on the hostname and using the token created by customize-image.sh
 # todo: config file instead of arguments + serverTLSBootstrap: true
 
+# initial setup
+readonly LOG_FILE="/var/log/k8s-firstboot.log"
+touch \$LOG_FILE
+exec &>\$LOG_FILE
+
 # functions
 log() {
-	echo "[\$(date '+%Y-%m-%d %H:%M:%S')] \$1" | tee -a /var/log/customize-image.log
+	echo "[\$(date '+%Y-%m-%d %H:%M:%S')] \$1"
 }
 
 setup_first_controlplane() {
