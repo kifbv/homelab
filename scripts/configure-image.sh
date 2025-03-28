@@ -152,22 +152,22 @@ setup_first_controlplane() {
 	kubeadm init --skip-phases=addon/kube-proxy --service-cidr 10.244.0.0/20 --pod-network-cidr=10.244.64.0/18 --token=\$TOKEN --control-plane-endpoint=\$HOST_IP --upload-certs --certificate-key=\$CERT_KEY
 }
 
-setup_next_controlplane() {
-	log "This is an extra controlplane"
-	kubeadm join
-}
-
-setup_worker_node() {
-	log "This is a worker node"
-	kubeadm join
-}
-	
 setup_pi_kubeconfig() {
 	log "Copy config files to pi user home dir"
 	cp /etc/kubernetes/admin.conf /home/pi/.kube/config
 	chown \$(id -u pi):\$(id -g pi) /home/pi/.kube/config
 }
 
+setup_next_controlplane() {
+	log "This is an extra controlplane"
+	kubeadm join \${CP_IP}:6443 --token=\$TOKEN --control-plane --certificate-key=\$CERT_KEY --discovery-token-unsafe-skip-ca-verification
+}
+
+setup_worker_node() {
+	log "This is a worker node"
+	kubeadm join \${CP_IP}:6443 --token=\$TOKEN --discovery-token-unsafe-skip-ca-verification
+}
+	
 cleanup_actions() {
 	log "Disable service to avoid issue in case of reboot"
 	systemctl disable k8s-firstboot.service --now
@@ -182,6 +182,7 @@ TOKEN="\$(cat /root/kubeadm-init-token)"
 CERT_KEY="\$(cat /root/kubeadm-cert-key)"
 HOST_TYPE="\$(cat /etc/hostname)"
 HOST_IP="\$(ip -4 -o addr show end0 | tr -s ' ' | cut -f4 -d' ' | cut -f1 -d/)"
+CP_IP=\$(resolvectl query controlplane | grep controlplane | cut -f2 -d' ')
 
 case \$HOST_TYPE in
 	controlplane)
