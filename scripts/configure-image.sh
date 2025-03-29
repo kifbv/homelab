@@ -191,11 +191,10 @@ setup_first_controlplane() {
 	log "This is the first controlplane"
 	kubeadm init --skip-phases=addon/kube-proxy --service-cidr 10.244.0.0/20 --pod-network-cidr=10.244.64.0/18 --token=\$TOKEN --control-plane-endpoint=\$HOST_IP --upload-certs --certificate-key=\$CERT_KEY
 	log "Install flux operator
-	sleep 5 && \
-	kubectl apply -f https://github.com/controlplaneio-fluxcd/flux-operator/releases/latest/download/install.yaml
-	kubectl create secret generic flux-sops --namespace=flux-system --from-file=age.agekey=/root/keys.txt
-	#install cilium with kube-proxy replacement
-	#create FluxInstance and synchonize: k apply -f flux-instance.yaml
+	sleep 5 && helm install cilium cilium/cilium --version 1.17.1 --repo https://helm.cilium.io/ --namespace kube-system --set kubeProxyReplacement=true --set k8sServiceHost=\$HOST_IP --set k8sServicePort=6443 --set hubble.relay.enabled=true --set hubble.ui.enabled=true
+	sleep 5 && kubectl create secret generic flux-sops --namespace=flux-system --from-file=age.agekey=/root/keys.txt
+	sleep 5 && kubectl apply -f https://github.com/controlplaneio-fluxcd/flux-operator/releases/latest/download/install.yaml
+	sleep 5 && kubectl apply -f /root/flux-instance.yaml
 }
 
 setup_pi_kubeconfig() {
