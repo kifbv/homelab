@@ -193,6 +193,9 @@ setup_first_controlplane() {
 	log "Install flux operator
 	sleep 5 && \
 	kubectl apply -f https://github.com/controlplaneio-fluxcd/flux-operator/releases/latest/download/install.yaml
+	kubectl create secret generic flux-sops --namespace=flux-system --from-file=age.agekey=/root/keys.txt
+	#install cilium with kube-proxy replacement
+	#create FluxInstance and synchonize: k apply -f flux-instance.yaml
 }
 
 setup_pi_kubeconfig() {
