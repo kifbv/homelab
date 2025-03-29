@@ -149,7 +149,7 @@ spec:
     artifact: "oci://ghcr.io/controlplaneio-fluxcd/flux-operator-manifests"
   sync:
     kind: GitRepository
-    url: "\$(git remote get-url origin)"
+    url: "$(git remote get-url origin)"
     ref: "refs/heads/main"
     path: "kubernetes/rpi-cluster"
   kustomize:
