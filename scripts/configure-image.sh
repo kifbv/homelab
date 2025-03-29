@@ -182,7 +182,7 @@ TOKEN="\$(cat /root/kubeadm-init-token)"
 CERT_KEY="\$(cat /root/kubeadm-cert-key)"
 HOST_TYPE="\$(cat /etc/hostname)"
 HOST_IP="\$(ip -4 -o addr show end0 | tr -s ' ' | cut -f4 -d' ' | cut -f1 -d/)"
-CP_IP=\$(resolvectl query controlplane | grep controlplane | cut -f2 -d' ')
+CP_IP=\$(resolvectl query -4 controlplane | grep controlplane | cut -f2 -d' ')
 
 case \$HOST_TYPE in
 	controlplane)
