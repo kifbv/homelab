@@ -8,7 +8,7 @@ spec:
   decryption:
     provider: sops
     secretRef:
-      name: sops-age
+      name: flux-sops
   interval: 1h0m0s
   path: ./kubernetes/rpi-cluster/apps
   prune: true

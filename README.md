@@ -93,7 +93,7 @@ EOF
 3. **Store the age private key in a Kubernetes secret for flux to use when decrypting secrets before sending them to Kubernetes**
 
 ```bash
-kubectl create secret generic sops-age \
+kubectl create secret generic flux-sops \
   --namespace=flux-system \
   --from-file=age.agekey=$HOME/.config/sops/age/keys.txt
 ```
