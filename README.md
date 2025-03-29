@@ -1,6 +1,6 @@
 # Homelab :house:
 
-Kubernetes homelab on Raspberry Pi 5
+Kubernetes Homelab on Raspberry Pi 5
 
 ## Features
 
@@ -13,6 +13,8 @@ Kubernetes homelab on Raspberry Pi 5
 ## Pre-requisites
 
 - [age](https://github.com/FiloSottile/age) and [sops](https://github.com/getsops/sops) for storing encrypted secrets in this repo
+- [flux](https://fluxcd.io/) to inspect and manage the Flux installation
+- [cilium](https://cilium.io/) to inspect and manage the Cilium installation
 - one or more Raspberry Pi 5 boards
 
 ## Installation
