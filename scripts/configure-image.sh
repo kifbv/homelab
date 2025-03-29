@@ -216,6 +216,8 @@ setup_worker_node() {
 cleanup_actions() {
 	log "Disable service to avoid issue in case of reboot"
 	systemctl disable k8s-firstboot.service
+	log "Remove install files from /root/"
+	rm -f /root/*
 }
 
 # business
