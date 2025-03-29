@@ -54,14 +54,21 @@ if ! curl -fsSL https://pkgs.k8s.io/addons:/cri-o:/stable:/$CRIO_VERSION/deb/Rel
     exit 1
 fi
     
-# Add the appropriate Kubernetes and CRI-O apt repositories
-# Also install nftables (for kube-proxy)
+# Download the public signing key for the Helm repository
+if ! curl https://baltocdn.com/helm/signing.asc | gpg --dearmor -o /etc/apt/keyrings/helm.gpg; then
+    log "Failed to download Helm signing key"
+    exit 1
+fi
+    
+# Add the appropriate apt repositories
 echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/$KUBERNETES_VERSION/deb/ /" | tee /etc/apt/sources.list.d/kubernetes.list
 echo "deb [signed-by=/etc/apt/keyrings/cri-o-apt-keyring.gpg] https://pkgs.k8s.io/addons:/cri-o:/stable:/$CRIO_VERSION/deb/ /" | tee /etc/apt/sources.list.d/cri-o.list
+echo "deb [arch=arm64 signed-by=/etc/apt/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" | tee /etc/apt/sources.list.d/helm-stable-debian.list
 
-log "Installing Kubernetes components (and vim :)"
+log "Installing Kubernetes components (+ git & vim )"
+#TODO: remove nftables if kube-proxy not used
 apt update --quiet || { log "Failed to update apt after adding repositories"; exit 1; }
-apt install --quiet --yes kubelet kubeadm kubectl cri-o nftables vim || \
+apt install --quiet --yes kubelet kubeadm kubectl cri-o nftables vim git helm || \
 	{ log "Failed to install Kubernetes components"; exit 1; }
 
 # Pin versions to prevent accidental upgrades
