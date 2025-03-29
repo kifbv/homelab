@@ -125,6 +125,34 @@ RemainAfterExit=true
 WantedBy=multi-user.target
 EOF
 
+# Create FluxInstance resource
+cat <<-EOF> "$MOUNT_DIR/root/flux-instance.yaml"
+apiVersion: fluxcd.controlplane.io/v1
+kind: FluxInstance
+metadata:
+  name: flux
+  namespace: flux-system
+spec:
+  distribution:
+    version: "2.x"
+    registry: "ghcr.io/fluxcd"
+    artifact: "oci://ghcr.io/controlplaneio-fluxcd/flux-operator-manifests"
+  sync:
+    kind: GitRepository
+    url: \$(git remote get-url origin)
+    ref: "refs/heads/main"
+    path: "kubernetes/rpi-cluster/config"
+  kustomize:
+    patches:
+      - patch: |
+          - op: add
+            path: /spec/decryption
+            value:
+              provider: sops
+              secretRef:
+                name: flux-sops
+EOF
+
 # Create bootstrap script
 cat <<-EOF> "$MOUNT_DIR/usr/bin/k8s-firstboot.sh"
 #!/usr/bin/bash
@@ -150,6 +178,9 @@ log() {
 setup_first_controlplane() {
 	log "This is the first controlplane"
 	kubeadm init --skip-phases=addon/kube-proxy --service-cidr 10.244.0.0/20 --pod-network-cidr=10.244.64.0/18 --token=\$TOKEN --control-plane-endpoint=\$HOST_IP --upload-certs --certificate-key=\$CERT_KEY
+	log "Install flux operator
+	sleep 5 && \
+	kubectl apply -f https://github.com/controlplaneio-fluxcd/flux-operator/releases/latest/download/install.yaml
 }
 
 setup_pi_kubeconfig() {
@@ -202,6 +233,8 @@ EOF
 
 # Make bootstrap script executable
 chmod 755 "$MOUNT_DIR/usr/bin/k8s-firstboot.sh"
+# Set root only permissions on /root/ files
+chmod 600 /root/*
 
 # Verify actions
 SSH_KEY_VERIFIED="$(cat $MOUNT_DIR/home/pi/.ssh/authorized_keys)"
