@@ -59,9 +59,9 @@ fi
 echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/$KUBERNETES_VERSION/deb/ /" | tee /etc/apt/sources.list.d/kubernetes.list
 echo "deb [signed-by=/etc/apt/keyrings/cri-o-apt-keyring.gpg] https://pkgs.k8s.io/addons:/cri-o:/stable:/$CRIO_VERSION/deb/ /" | tee /etc/apt/sources.list.d/cri-o.list
 
-log "Installing Kubernetes components"
+log "Installing Kubernetes components (and vim :)"
 apt update --quiet || { log "Failed to update apt after adding repositories"; exit 1; }
-apt install --quiet --yes kubelet kubeadm kubectl cri-o nftables || \
+apt install --quiet --yes kubelet kubeadm kubectl cri-o nftables vim || \
 	{ log "Failed to install Kubernetes components"; exit 1; }
 
 # Pin versions to prevent accidental upgrades
