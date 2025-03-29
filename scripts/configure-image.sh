@@ -31,6 +31,13 @@ IMAGE_FILE="$1"
 NEW_HOSTNAME="$2"
 SSH_KEY_FILE="$3"
 PASSWD="$4"
+SOPS_SECRET="$HOME/.config/sops/age/keys.txt"
+
+# Validate sops secret exists
+if [[ ! -f $SOPS_SECRET ]]; then
+	echo "Error: sops secret not found, you need to generate one before running this script" >&2
+	exit 1
+fi
 
 # Validate image file exists
 if [[ ! -f "$IMAGE_FILE" ]]; then
@@ -110,6 +117,9 @@ fi
 
 # Add password for pi user
 echo "pi:$PASSWD" | chpasswd -P "$MOUNT_DIR"
+
+# Copy sops secret to root home dir
+cp $SOPS_SECRET $MOUNT_DIR/root/keys.txt
 
 # Create systemd service unit
 cat <<EOF> "$MOUNT_DIR/usr/lib/systemd/system/k8s-firstboot.service"
