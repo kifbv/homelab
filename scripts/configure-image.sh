@@ -1,5 +1,5 @@
 #!/bin/bash
-# Script to modify hostname and SSH keys in Armbian image before burning to SD card
+# Script to the Armbian image before burning to SD card
 
 set -e
 
@@ -17,7 +17,7 @@ function show_usage() {
     echo "Options:"
     echo "  --image, -i       Path to the Armbian image file"
     echo "  --hostname, -h    Hostname to set on the image (must be 'controlplane', 'controlplane[0-9]', or 'node[0-9]')"
-    echo "  --ssh-key, -k     SSH public key file to add to authorized_keys"
+    echo "  --ssh-key, -k     Path to the SSH public key file to add to authorized_keys"
     echo "  --password, -p    Password for the k8s pi user (in clear text)"
     echo "  --help            Show this help message"
 }
@@ -66,9 +66,8 @@ if [[ -z "$IMAGE_FILE" || -z "$NEW_HOSTNAME" || -z "$SSH_KEY_FILE" || -z "$PASSW
     exit 1
 fi
 
-SOPS_SECRET="$(getent passwd "$SUDO_USER" | cut -d: -f6)/.config/sops/age/keys.txt"
-
 # Validate sops secret exists
+SOPS_SECRET="$(getent passwd "$SUDO_USER" | cut -d: -f6)/.config/sops/age/keys.txt"
 if [[ ! -f $SOPS_SECRET ]]; then
     echo "Error: sops secret not found, you need to generate one before running this script" >&2
     exit 1
