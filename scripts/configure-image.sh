@@ -11,18 +11,57 @@ fi
 
 # Show usage information
 function show_usage() {
-    echo "Usage: $0 <image_file> <new_hostname> <ssh_public_key_file>"
-    echo "Example: $0 Armbian_22.11.0_Rpi4_jammy_current_5.15.80.img node-01 ~/.ssh/id_ed25519.pub pass1234"
+    echo "Usage: $0 --image <image_file> --hostname <hostname> --ssh-key <ssh_key_file> --password <password>"
+    echo "Example: $0 --image Armbian_22.11.0_Rpi4_jammy_current_5.15.80.img --hostname node-01 --ssh-key ~/.ssh/id_ed25519.pub --password pass1234"
     echo
-    echo "Arguments:"
-    echo "  <image_file>          Path to the Armbian image file"
-    echo "  <new_hostname>        Hostname to set on the image"
-    echo "  <ssh_public_key_file> SSH public key file to add to authorized_keys"
-    echo "  <password>            Password for the k8s pi user (in clear text)"
+    echo "Options:"
+    echo "  --image, -i       Path to the Armbian image file"
+    echo "  --hostname, -h    Hostname to set on the image"
+    echo "  --ssh-key, -k     SSH public key file to add to authorized_keys"
+    echo "  --password, -p    Password for the k8s pi user (in clear text)"
+    echo "  --help            Show this help message"
 }
 
-# Validate arguments
-if [[ $# -lt 4 ]]; then
+# Initialize variables
+IMAGE_FILE=""
+NEW_HOSTNAME=""
+SSH_KEY_FILE=""
+PASSWD=""
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --image|-i)
+            IMAGE_FILE="$2"
+            shift 2
+            ;;
+        --hostname|-h)
+            NEW_HOSTNAME="$2"
+            shift 2
+            ;;
+        --ssh-key|-k)
+            SSH_KEY_FILE="$2"
+            shift 2
+            ;;
+        --password|-p)
+            PASSWD="$2"
+            shift 2
+            ;;
+        --help)
+            show_usage
+            exit 0
+            ;;
+        *)
+            echo "Error: Unknown option $1" >&2
+            show_usage
+            exit 1
+            ;;
+    esac
+done
+
+# Validate required arguments
+if [[ -z "$IMAGE_FILE" || -z "$NEW_HOSTNAME" || -z "$SSH_KEY_FILE" || -z "$PASSWD" ]]; then
+    echo "Error: Missing required arguments" >&2
     show_usage
     exit 1
 fi
@@ -261,4 +300,4 @@ rmdir "$MOUNT_DIR"
 echo -e "\nDone! Image $IMAGE_FILE has been modified:"
 echo -e "\tHostname=$HOSTNAME_VERIFIED\n\tSSHKey=$SSH_KEY_VERIFIED"
 echo -e "\nYou can now burn this image to an SD card with e.g.:
-sudo dd bs=4M conv=fsync oflag=direct status=progress if=$1 of=/dev/<your_sdcard>"
+	sudo dd bs=4M conv=fsync oflag=direct status=progress if=$IMAGE_FILE of=/dev/<your_sdcard>"
