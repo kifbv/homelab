@@ -12,11 +12,11 @@ fi
 # Show usage information
 function show_usage() {
     echo "Usage: $0 --image <image_file> --hostname <hostname> --ssh-key <ssh_key_file> --password <password>"
-    echo "Example: $0 --image Armbian_22.11.0_Rpi4_jammy_current_5.15.80.img --hostname node-01 --ssh-key ~/.ssh/id_ed25519.pub --password pass1234"
+    echo "Example: $0 --image Armbian_22.11.0_Rpi4_jammy_current_5.15.80.img --hostname node0 --ssh-key ~/.ssh/id_ed25519.pub --password pass1234"
     echo
     echo "Options:"
     echo "  --image, -i       Path to the Armbian image file"
-    echo "  --hostname, -h    Hostname to set on the image"
+    echo "  --hostname, -h    Hostname to set on the image (must be 'controlplane', 'controlplane[0-9]', or 'node[0-9]')"
     echo "  --ssh-key, -k     SSH public key file to add to authorized_keys"
     echo "  --password, -p    Password for the k8s pi user (in clear text)"
     echo "  --help            Show this help message"
@@ -83,6 +83,12 @@ fi
 # Validate hostname format
 if ! [[ "$NEW_HOSTNAME" =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$ ]]; then
     echo "Error: Invalid hostname format. Hostname should contain only alphanumeric characters and hyphens, and cannot start or end with a hyphen." >&2
+    exit 1
+fi
+
+# Validate hostname is one of the allowed patterns
+if ! [[ "$NEW_HOSTNAME" == "controlplane" || "$NEW_HOSTNAME" =~ ^controlplane[0-9]$ || "$NEW_HOSTNAME" =~ ^node[0-9]$ ]]; then
+    echo "Error: Invalid hostname. Allowed formats are: 'controlplane', 'controlplane[0-9]', or 'node[0-9]'" >&2
     exit 1
 fi
 
@@ -207,12 +213,16 @@ echo "Creating appropriate bootstrap script for $NEW_HOSTNAME..."
 if [[ "$NEW_HOSTNAME" == "controlplane" ]]; then
     # First control plane node
     cp "$(dirname "$0")/controlplane-template.sh" "$MOUNT_DIR/usr/bin/k8s-firstboot.sh"
-elif [[ "$NEW_HOSTNAME" =~ controlplane[0-9] ]]; then
+elif [[ "$NEW_HOSTNAME" =~ ^controlplane[0-9]$ ]]; then
     # Additional control plane nodes
     cp "$(dirname "$0")/controlplane-secondary-template.sh" "$MOUNT_DIR/usr/bin/k8s-firstboot.sh"
-else
+elif [[ "$NEW_HOSTNAME" =~ ^node[0-9]$ ]]; then
     # Worker nodes
     cp "$(dirname "$0")/worker-template.sh" "$MOUNT_DIR/usr/bin/k8s-firstboot.sh"
+else
+    # This should never happen due to validation above
+    echo "Error: Unrecognized hostname pattern: $NEW_HOSTNAME" >&2
+    exit 1
 fi
 
 cat "$MOUNT_DIR/usr/bin/k8s-firstboot.sh"
