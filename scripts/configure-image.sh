@@ -27,11 +27,7 @@ if [[ $# -lt 4 ]]; then
     exit 1
 fi
 
-IMAGE_FILE="$1"
-NEW_HOSTNAME="$2"
-SSH_KEY_FILE="$3"
-PASSWD="$4"
-SOPS_SECRET="$HOME/.config/sops/age/keys.txt"
+SOPS_SECRET="$(getent passwd "$SUDO_USER" | cut -d: -f6)/.config/sops/age/keys.txt"
 
 # Validate sops secret exists
 if [[ ! -f $SOPS_SECRET ]]; then
