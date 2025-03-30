@@ -79,12 +79,6 @@ if [[ ! -f "$IMAGE_FILE" ]]; then
     exit 1
 fi
 
-# Validate hostname format
-if ! [[ "$NEW_HOSTNAME" =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$ ]]; then
-    echo "Error: Invalid hostname format. Hostname should contain only alphanumeric characters and hyphens, and cannot start or end with a hyphen." >&2
-    exit 1
-fi
-
 # Validate hostname is one of the allowed patterns
 if ! [[ "$NEW_HOSTNAME" == "controlplane" || "$NEW_HOSTNAME" =~ ^controlplane[0-9]$ || "$NEW_HOSTNAME" =~ ^node[0-9]$ ]]; then
     echo "Error: Invalid hostname. Allowed formats are: 'controlplane', 'controlplane[0-9]', or 'node[0-9]'" >&2
