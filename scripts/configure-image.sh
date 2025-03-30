@@ -70,8 +70,8 @@ SOPS_SECRET="$(getent passwd "$SUDO_USER" | cut -d: -f6)/.config/sops/age/keys.t
 
 # Validate sops secret exists
 if [[ ! -f $SOPS_SECRET ]]; then
-	echo "Error: sops secret not found, you need to generate one before running this script" >&2
-	exit 1
+    echo "Error: sops secret not found, you need to generate one before running this script" >&2
+    exit 1
 fi
 
 # Validate image file exists
