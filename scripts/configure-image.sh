@@ -200,87 +200,22 @@ spec:
           kind: Kustomization
 EOF
 
-# Create bootstrap script
-cat <<-EOF> "$MOUNT_DIR/usr/bin/k8s-firstboot.sh"
-#!/usr/bin/bash
-# k8s install script
-# for some reason i don't understand, both /bin/bash and /usr/bin/bash are bash v5.x
-# but only the later knows about [[ which makes me think dash is used instead which
-# means the shebang has to be as above
+# Create bootstrap script based on hostname
+echo "Creating appropriate bootstrap script for $NEW_HOSTNAME..."
 
-# run kubeadm init for controlplane or kubeadm join for nodes
-# based on the hostname and using the token created by customize-image.sh
-# todo: config file instead of arguments + serverTLSBootstrap: true
+# Copy the appropriate template based on hostname
+if [[ "$NEW_HOSTNAME" == "controlplane" ]]; then
+    # First control plane node
+    cp "$(dirname "$0")/controlplane-template.sh" "$MOUNT_DIR/usr/bin/k8s-firstboot.sh"
+elif [[ "$NEW_HOSTNAME" =~ controlplane[0-9] ]]; then
+    # Additional control plane nodes
+    cp "$(dirname "$0")/controlplane-secondary-template.sh" "$MOUNT_DIR/usr/bin/k8s-firstboot.sh"
+else
+    # Worker nodes
+    cp "$(dirname "$0")/worker-template.sh" "$MOUNT_DIR/usr/bin/k8s-firstboot.sh"
+fi
 
-# initial setup
-readonly LOG_FILE="/var/log/k8s-firstboot.log"
-touch \$LOG_FILE
-exec &>\$LOG_FILE
-
-# functions
-log() {
-	echo "[\$(date '+%Y-%m-%d %H:%M:%S')] \$1"
-}
-
-setup_first_controlplane() {
-	log "This is the first controlplane"
-	kubeadm init --skip-phases=addon/kube-proxy --service-cidr 10.244.0.0/20 --pod-network-cidr=10.244.64.0/18 --token=\$TOKEN --control-plane-endpoint=\$HOST_IP --upload-certs --certificate-key=\$CERT_KEY
-	log "Install flux operator
-	sleep 5 && helm install cilium cilium/cilium --version 1.17.1 --repo https://helm.cilium.io/ --namespace kube-system --set kubeProxyReplacement=true --set k8sServiceHost=\$HOST_IP --set k8sServicePort=6443 --set hubble.relay.enabled=true --set hubble.ui.enabled=true
-	sleep 5 && kubectl create secret generic flux-sops --namespace=flux-system --from-file=age.agekey=/root/keys.txt
-	sleep 5 && kubectl apply -f https://github.com/controlplaneio-fluxcd/flux-operator/releases/latest/download/install.yaml
-	sleep 5 && kubectl apply -f /root/flux-instance.yaml
-}
-
-setup_pi_kubeconfig() {
-	log "Copy config files to pi user home dir"
-	cp /etc/kubernetes/admin.conf /home/pi/.kube/config
-	chown \$(id -u pi):\$(id -g pi) /home/pi/.kube/config
-}
-
-setup_next_controlplane() {
-	log "This is an extra controlplane"
-	kubeadm join \${CP_IP}:6443 --token=\$TOKEN --control-plane --certificate-key=\$CERT_KEY --discovery-token-unsafe-skip-ca-verification
-}
-
-setup_worker_node() {
-	log "This is a worker node"
-	kubeadm join \${CP_IP}:6443 --token=\$TOKEN --discovery-token-unsafe-skip-ca-verification
-}
-	
-cleanup_actions() {
-	log "Disable service to avoid issue in case of reboot"
-	systemctl disable k8s-firstboot.service
-	log "Remove install files from /root/"
-	rm -f /root/*
-}
-
-# business
-log "Sleep 5s just to be sure everything else is set up"
-sleep 5
-
-log "Retrieving configuration values"
-TOKEN="\$(cat /root/kubeadm-init-token)"
-CERT_KEY="\$(cat /root/kubeadm-cert-key)"
-HOST_TYPE="\$(cat /etc/hostname)"
-HOST_IP="\$(ip -4 -o addr show end0 | tr -s ' ' | cut -f4 -d' ' | cut -f1 -d/)"
-CP_IP=\$(resolvectl query -4 controlplane | grep controlplane | cut -f2 -d' ')
-
-case \$HOST_TYPE in
-	controlplane)
-		setup_first_controlplane
-		setup_pi_kubeconfig
-		;;
-	controlplane*)
-		setup_next_controlplane
-		;;
-	node*)
-		setup_worker_node
-		;;
-esac
-
-cleanup_actions
-EOF
+cat "$MOUNT_DIR/usr/bin/k8s-firstboot.sh"
 
 # Make bootstrap script executable
 chmod 755 "$MOUNT_DIR/usr/bin/k8s-firstboot.sh"
