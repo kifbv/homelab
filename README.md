@@ -108,17 +108,59 @@ This DNS entry is critical because the Kubernetes API server is configured with 
 
 #### 5. ➕ Add Additional Nodes
 
-Repeat steps 2-3 for each additional node:
+##### ⏱️ Time-sensitive warning
 
-- For additional control plane nodes (`controlplane[0-9]`): Note that uploaded certificate keys are valid for only 2 hours. If needed, regenerate them with:
-  ```bash
-  kubeadm init phase upload-certs --upload-certs
-  ```
+> ⚠️ **Important**: The automated node join functionality is time-limited:
+> - Control plane certificate keys expire after **2 hours**
+> - Worker join tokens expire after **24 hours**
+>
+> If you're adding nodes within these timeframes, simply repeat steps 2-3 for each additional node.
+> For nodes added later, follow the manual process below.
 
-- For worker nodes (`worker[0-9]`): The initial join token is valid for 24 hours. If needed, generate a new one with:
-  ```bash
-  kubeadm token create --print-join-command
-  ```
+##### Adding nodes after certificate/token expiration
+
+###### For control plane nodes:
+
+1. On an existing control plane node, generate new certificate keys:
+   ```bash
+   sudo kubeadm init phase upload-certs --upload-certs
+   ```
+   This command will output a new certificate key.
+
+2. Create a new token:
+   ```bash
+   sudo kubeadm token create
+   ```
+
+3. Get the CA cert hash:
+   ```bash
+   openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | \
+     openssl rsa -pubin -outform der 2>/dev/null | \
+     openssl dgst -sha256 -hex | tr -s ' ' | cut -f2 -d' '
+   ```
+
+4. Manually join the new control plane node:
+   ```bash
+   sudo kubeadm join controlplane:6443 \
+     --token <token> \
+     --discovery-token-ca-cert-hash sha256:<hash> \
+     --control-plane \
+     --certificate-key <certificate-key>
+   ```
+
+###### For worker nodes:
+
+1. On a control plane node, generate a new join command:
+   ```bash
+   sudo kubeadm token create --print-join-command
+   ```
+
+2. Use that command on the new worker node:
+   ```bash
+   sudo kubeadm join controlplane:6443 \
+     --token <token> \
+     --discovery-token-ca-cert-hash sha256:<hash>
+   ```
 
 ## 🔧 Additional Configuration
 
