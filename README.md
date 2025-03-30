@@ -96,17 +96,7 @@ Once the media is ready:
 
 The Pi will automatically execute the appropriate bootstrap script to either initialize the cluster (control plane) or join an existing cluster (secondary control plane or worker).
 
-#### 4. 🌐 Set Up DNS for the Control Plane
-
-> ⚠️ **Important**: This step must be completed within 4 minutes of booting the control plane node!
-
-After the main `controlplane` node boots:
-1. Add a DHCP reservation in your router for the control plane node
-2. Ensure the hostname `controlplane` resolves to its IP address
-
-This DNS entry is critical because the Kubernetes API server is configured with `--control-plane-endpoint=controlplane`, allowing for future high availability setups.
-
-#### 5. ➕ Add Additional Nodes
+#### 4. ➕ Add Additional Nodes
 
 ##### ⏱️ Time-sensitive warning
 
@@ -163,6 +153,10 @@ This DNS entry is critical because the Kubernetes API server is configured with 
    ```
 
 ## 🔧 Additional Configuration
+
+#### 🌐 DHCP reservations
+
+Once you've checked everything is running and your cluster is here to stay, it is a good idea to add a DHCP reservation in your router for the various nodes, in case they reboot.
 
 ### 📝 Metrics Server Configuration
 
