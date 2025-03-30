@@ -8,13 +8,13 @@ Kubernetes Homelab on Raspberry Pi 5
 - [kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/) installed Kubernetes cluster.
 - [CRI-O](https://github.com/cri-o/cri-o/tree/main) container runtime.
 - [Cilium](https://www.cilium.io/) CNI.
-- GitOps with [Flux](https://fluxcd.io/).
+- [Flux](https://fluxcd.io/) for GitOps.
 
-## Pre-requisites
+## Requirements
 
 - [age](https://github.com/FiloSottile/age) and [sops](https://github.com/getsops/sops) for storing encrypted secrets in this repo
-- [flux](https://fluxcd.io/) to inspect and manage the Flux installation
-- [cilium](https://cilium.io/) to inspect and manage the Cilium installation
+- [flux](https://fluxcd.io/) to inspect and manage the Flux installation (optional)
+- [cilium](https://cilium.io/) to inspect and manage the Cilium installation (optional)
 - one or more Raspberry Pi 5 boards
 
 ## Installation
