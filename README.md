@@ -1,87 +1,41 @@
-# Homelab :house:
+# 🏠 Homelab - Kubernetes on Raspberry Pi 5
 
-Kubernetes Homelab on Raspberry Pi 5
+A complete Kubernetes homelab setup running on Raspberry Pi 5 boards with GitOps and self-healing capabilities.
 
-## Features
+## ✨ Features
 
-- [Armbian OS](https://www.armbian.com/) (Linux for ARM development boards).
-- [kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/) installed Kubernetes cluster.
-- [CRI-O](https://github.com/cri-o/cri-o/tree/main) container runtime.
-- [Cilium](https://www.cilium.io/) CNI.
-- [Flux](https://fluxcd.io/) for GitOps.
+- 🐧 [Armbian OS](https://www.armbian.com/) - Optimized Linux for ARM boards
+- ☸️ [kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/) - Production-grade Kubernetes installation
+- 🐳 [CRI-O](https://github.com/cri-o/cri-o/tree/main) - Lightweight container runtime
+- 🔄 [Cilium](https://www.cilium.io/) - eBPF-based networking, observability, and security
+- 🚢 [Flux](https://fluxcd.io/) - GitOps continuous delivery solution
 
-## Requirements
+## 📋 Requirements
 
-- [age](https://github.com/FiloSottile/age) and [sops](https://github.com/getsops/sops) for storing encrypted secrets in this repo
-- [flux](https://fluxcd.io/) to inspect and manage the Flux installation (optional)
-- [cilium](https://cilium.io/) to inspect and manage the Cilium installation (optional)
-- one or more Raspberry Pi 5 boards
+- 🔐 [age](https://github.com/FiloSottile/age) and [sops](https://github.com/getsops/sops) - For storing encrypted secrets in the repository
+- 🚢 [flux CLI](https://fluxcd.io/docs/installation/) - To inspect and manage the Flux installation (optional)
+- 🔄 [cilium CLI](https://docs.cilium.io/en/stable/gettingstarted/k8s-install-default/#install-the-cilium-cli) - To inspect and manage the Cilium installation (optional)
+- 🍓 One or more Raspberry Pi 5 boards with at least 8GB RAM recommended
+- 🧠 microSD cards (32GB+ recommended) or USB/NVMe storage
 
-## Installation
+## 🚀 Installation
 
-### Create the cluster
+### 🔐 Setting Up Secret Management with SOPS
 
-1. **Build the Raspberry Pi image**
+> ⚠️ **IMPORTANT**: You must set up SOPS **BEFORE** running the configure-image.sh script, as the script expects the SOPS key to already exist.
 
-For this, run the `Build Armbian Image` workflow.
+#### 1. 🔑 Create an Age Key Pair
 
-This will produce an Armbian image (Debian based for ARM SBCs) with all the necessary components for a **controlplane** or **worker** node already installed (kubeadm, kubelet, kubectl, cri-o).
+```bash
+mkdir -p ~/.config/sops/age
+age-keygen -o ~/.config/sops/age/keys.txt
+```
 
-The image is customized thanks to the `userpatches/customize-image.sh` script.
+This creates an Age key in the default location where SOPS will look for it.
 
-I am using a slightly modified version of the original workflow, with the following extra arguments but you can use the original `armbian/build` action if you prefer.
-  - `CONSOLE_AUTOLOGIN=no` to avoid automatically login as root for local consoles at first run.
-  - `EXTRAWIFI=no` to not include extra wifi drivers.
+#### 2. 📄 Configure SOPS for the Repository
 
-2. **Configure the Raspberry Pi image**
-
-Before burning the image to the target storage, it needs to be configured for the target node (i.e. controlplane, node01, node02...).
-
-This is done with the `configure-image.sh` script and is similar to what can be achieved with the [Raspberry Pi Imager](https://www.raspberrypi.com/software/).
-
-Run that script with `sudo configure-image.sh to see the usage.
-
-3. **Boot your Pi**
-
-The previous script will give you the command to run (you will find the path to your device with e.g. `lsblk`).
-
-Once the medium is ready, connect it to your Pi, plug it into your switch and power it on.
-
-Each Pi will boot and execute specific commands in order to init or join a cluster. This is done with some systemd services running at boot time (see `scripts/configure-image.sh`).
-
-4. **Update your router's config**
-
-After the `controlplane` node has booted, quickly add a DHCP reservation for it with the name `controlplane`. Hurry up, you have 4 minutes until `kubeadm` aborts the installation.
-
-This DHCP reservation is required because we passed the `--control-plane-endpoint` option to `kubeadm init`. This option gives kubernetes a fixed DNS name for the cluster endpoint and allows to update to an HA cluster in the future.
-
-_TODO: add logic for workers and subsequent controlplanes_
-_TODO: add cilium install script_
-
-5. **Add other nodes to the cluster**
-
-You can now add extra nodes by repeating steps 2 and 3 above.
-
-- controlplane nodes: as a safeguard, uploaded-certs will be deleted in two hours. If necessary, you can use `kubeadm init phase upload-certs --upload-certs` to reload certs afterward to add controlplane nodes.
-- worker nodes: the initial token is valid for 24h. If necessary, you can use `kubeadm token create --print-join-command` to regenerate a join command.
-
-## Configuration
-
-Now that the cluster is up and running, it's time to bootstrap `flux` which will install all the apps in the cluster.
-
-### Prepare the SOPS stuff
-
-Before bootstrapping flux we need to set the stage for storing secrets inside the repo.
-
-Other solutions include Hashicorp Vault, Azure Key Vaults, AWS KMS, etc but this simpler and good enough for me.
-
-1. **Create a key pair for encrypting secrets**
-
-`mkdir -p ~/.config/sops/age && age-keygen -o ~/.config/sops/age/key.txt`
-
-This creates and store an age key in the default location where sops is expecting it.
-
-2. **Add sops config file at root of repo in `.sops.yaml`**
+Create a `.sops.yaml` configuration file at the root of your repository:
 
 ```bash
 cat <<-EOF> $(git rev-parse --show-toplevel)/.sops.yaml
@@ -92,6 +46,92 @@ creation_rules:
 EOF
 ```
 
-Notes:
-- metrics-server: add serverTLSBootstrap: true to the kubelets' config files (and verify that rotateCertificates: true), restart kubelet, accept the CSRs => this will ensure that the kubelet has certificates signed by the cluster's CA (i.e. this avoids starting the metrics-server pods with the --kubelet-insecure-tls flag)
-To avoid doing this post kubeadm install see [here](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-certs/#kubelet-serving-certs) IMPORTANT: the CSR for these certificates have to be manually approved.
+### Creating the Kubernetes Cluster
+
+#### 1. 🔨 Build the Raspberry Pi Image
+
+Run the `Build Armbian Image` GitHub workflow to create a custom Armbian image with:
+- Kubernetes components pre-installed (kubeadm, kubelet, kubectl)
+- CRI-O container runtime
+- All necessary dependencies for both control plane and worker nodes
+
+The image is customized through the `userpatches/customize-image.sh` script with these optimizations:
+- `CONSOLE_AUTOLOGIN=no` - Improved security by disabling automatic root login
+- `EXTRAWIFI=no` - Smaller image by excluding unnecessary WiFi drivers
+
+#### 2. ⚙️ Configure the Image
+
+Before burning the image to your microSD card or storage device, you need to configure it for the specific node role:
+
+```bash
+# Show usage information
+sudo ./scripts/configure-image.sh --help
+
+# Example for the main control plane node
+sudo ./scripts/configure-image.sh --image Armbian.img --hostname controlplane --ssh-key ~/.ssh/id_ed25519.pub --password yourpassword
+
+# Example for a worker node
+sudo ./scripts/configure-image.sh --image Armbian.img --hostname worker0 --ssh-key ~/.ssh/id_ed25519.pub --password yourpassword
+```
+
+The script supports these hostname patterns:
+- `controlplane` - The main control plane node (only one)
+- `controlplane[0-9]` - Additional control plane nodes (for HA setups)
+- `worker[0-9]` - Worker nodes
+
+#### 3. 📱 Boot Your Raspberry Pi
+
+Burn the image to your storage device using the provided command:
+
+```bash
+sudo dd bs=4M conv=fsync oflag=direct status=progress if=Armbian.img of=/dev/mmcblk0
+```
+
+Find your device path using `lsblk` if needed.
+
+Once the media is ready:
+1. Insert it into your Raspberry Pi
+2. Connect the Pi to your network via Ethernet
+3. Power it on
+
+The Pi will automatically execute the appropriate bootstrap script to either initialize the cluster (control plane) or join an existing cluster (secondary control plane or worker).
+
+#### 4. 🌐 Set Up DNS for the Control Plane
+
+> ⚠️ **Important**: This step must be completed within 4 minutes of booting the control plane node!
+
+After the main `controlplane` node boots:
+1. Add a DHCP reservation in your router for the control plane node
+2. Ensure the hostname `controlplane` resolves to its IP address
+
+This DNS entry is critical because the Kubernetes API server is configured with `--control-plane-endpoint=controlplane`, allowing for future high availability setups.
+
+#### 5. ➕ Add Additional Nodes
+
+Repeat steps 2-3 for each additional node:
+
+- For additional control plane nodes (`controlplane[0-9]`): Note that uploaded certificate keys are valid for only 2 hours. If needed, regenerate them with:
+  ```bash
+  kubeadm init phase upload-certs --upload-certs
+  ```
+
+- For worker nodes (`worker[0-9]`): The initial join token is valid for 24 hours. If needed, generate a new one with:
+  ```bash
+  kubeadm token create --print-join-command
+  ```
+
+## 🔧 Additional Configuration
+
+### 📝 Metrics Server Configuration
+
+For proper metrics-server operation with secure kubelet connections:
+
+1. Add `serverTLSBootstrap: true` to the kubelet's configuration (verify that `rotateCertificates: true` is also set)
+2. Restart the kubelet service
+3. Approve the generated CSRs to ensure the kubelet has certificates signed by the cluster's CA
+
+This avoids the need to use the insecure `--kubelet-insecure-tls` flag.
+
+For more details, see the [Kubernetes documentation on kubelet serving certificates](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-certs/#kubelet-serving-certs).
+
+> ⚠️ **Important**: The CSRs for these certificates must be manually approved.
