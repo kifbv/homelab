@@ -92,31 +92,6 @@ creation_rules:
 EOF
 ```
 
-3. **Store the age private key in a Kubernetes secret for flux to use when decrypting secrets before sending them to Kubernetes**
-
-```bash
-kubectl create secret generic flux-sops \
-  --namespace=flux-system \
-  --from-file=age.agekey=$HOME/.config/sops/age/keys.txt
-```
-
-### Bootstrap Flux
-
-1. **Create a github pat token with the following repo rights: admin (RW), contents (RW)**
-
-2. **Bootstrap flux (it will ask for the token)**
-
-```bash
-flux bootstrap github  \
-  --components-extra image-reflector-controller,image-automation-controller \
-  --token-auth=false \
-  --owner=<your_gh_name> \
-  --repository=homelab \
-  --branch=main \
-  --path=kubernetes/rpi-cluster/config \
-  --personal
-```
-
 Notes:
 - metrics-server: add serverTLSBootstrap: true to the kubelets' config files (and verify that rotateCertificates: true), restart kubelet, accept the CSRs => this will ensure that the kubelet has certificates signed by the cluster's CA (i.e. this avoids starting the metrics-server pods with the --kubelet-insecure-tls flag)
 To avoid doing this post kubeadm install see [here](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-certs/#kubelet-serving-certs) IMPORTANT: the CSR for these certificates have to be manually approved.
