@@ -218,8 +218,6 @@ else
     exit 1
 fi
 
-cat "$MOUNT_DIR/usr/bin/k8s-firstboot.sh"
-
 # Make bootstrap script executable
 chmod 755 "$MOUNT_DIR/usr/bin/k8s-firstboot.sh"
 # Set root only permissions on /root/ files
