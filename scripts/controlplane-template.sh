@@ -30,7 +30,8 @@ kubeadm init --skip-phases=addon/kube-proxy --service-cidr 10.244.0.0/20 --pod-n
 
 # Install required components
 log "Installing cilium"
-sleep 5 && helm install cilium cilium/cilium --version 1.17.1 --repo https://helm.cilium.io/ --namespace kube-system --set kubeProxyReplacement=true --set k8sServiceHost=$HOST_IP --set k8sServicePort=6443 --set hubble.relay.enabled=true --set hubble.ui.enabled=true
+export KUBECONFIG=/etc/kubernetes/admin.conf
+sleep 5 && helm install --repo https://helm.cilium.io/ cilium cilium --namespace kube-system --set kubeProxyReplacement=true --set k8sServiceHost=$HOST_IP --set k8sServicePort=6443 --set hubble.relay.enabled=true --set hubble.ui.enabled=true
 
 log "Setting up flux"
 sleep 5 && kubectl create secret generic flux-sops --namespace=flux-system --from-file=age.agekey=/root/keys.txt
