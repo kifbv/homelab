@@ -34,8 +34,8 @@ export KUBECONFIG=/etc/kubernetes/admin.conf
 sleep 5 && helm install --repo https://helm.cilium.io/ cilium cilium --namespace kube-system --set kubeProxyReplacement=true --set k8sServiceHost=$HOST_IP --set k8sServicePort=6443 --set hubble.relay.enabled=true --set hubble.ui.enabled=true
 
 log "Setting up flux"
-sleep 5 && kubectl create secret generic flux-sops --namespace=flux-system --from-file=age.agekey=/root/keys.txt
 sleep 5 && kubectl apply -f https://github.com/controlplaneio-fluxcd/flux-operator/releases/latest/download/install.yaml
+sleep 5 && kubectl create secret generic flux-sops --namespace=flux-system --from-file=age.agekey=/root/keys.txt
 sleep 5 && kubectl apply -f /root/flux-instance.yaml
 
 # Setup kubeconfig for the pi user
