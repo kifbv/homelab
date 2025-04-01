@@ -10,7 +10,7 @@ spec:
       reconcileStrategy: ChartVersion
       sourceRef:
         kind: HelmRepository
-        name: metrics-server
+        name: monitoring
       version: 3.12.x
   interval: 1m0s
   values:
