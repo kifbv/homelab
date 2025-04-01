@@ -206,6 +206,8 @@ echo "Creating appropriate bootstrap script for $NEW_HOSTNAME..."
 if [[ "$NEW_HOSTNAME" == "controlplane" ]]; then
     # First control plane node
     cp "$(dirname "$0")/controlplane-template.sh" "$MOUNT_DIR/usr/bin/k8s-firstboot.sh"
+    # Copy kubeadm configuration template
+    cp "$(dirname "$0")/kubeadm-init.yaml.tpl" "$MOUNT_DIR/root/kubeadm-init.yaml.tpl"
 elif [[ "$NEW_HOSTNAME" =~ ^controlplane[0-9]$ ]]; then
     # Additional control plane nodes
     cp "$(dirname "$0")/controlplane-secondary-template.sh" "$MOUNT_DIR/usr/bin/k8s-firstboot.sh"

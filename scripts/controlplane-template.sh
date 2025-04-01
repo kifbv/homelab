@@ -26,7 +26,16 @@ HOST_IP="$(ip -4 -o addr show end0 | tr -s ' ' | cut -f4 -d' ' | cut -f1 -d/)"
 
 # Initialize the first control plane
 log "This is the first control plane"
-kubeadm init --skip-phases=addon/kube-proxy --service-cidr 10.244.0.0/20 --pod-network-cidr=10.244.64.0/18 --token=$TOKEN --control-plane-endpoint=$HOST_IP --upload-certs --certificate-key=$CERT_KEY
+
+# Generate kubeadm config from template with variables substituted
+log "Creating kubeadm init configuration"
+mkdir -p /root/kubeadm
+envsubst < /root/kubeadm-init.yaml.tpl > /root/kubeadm/kubeadm-init.yaml
+cat /root/kubeadm/kubeadm-init.yaml >> $LOG_FILE
+
+# Initialize the cluster with the configuration file
+log "Running kubeadm init with configuration"
+kubeadm init --config=/root/kubeadm/kubeadm-init.yaml --upload-certs
 
 # Install required components
 log "Installing cilium"
