@@ -71,13 +71,13 @@ sudo ./scripts/configure-image.sh --help
 sudo ./scripts/configure-image.sh --image Armbian.img --hostname controlplane --ssh-key ~/.ssh/id_ed25519.pub --password yourpassword
 
 # Example for a worker node
-sudo ./scripts/configure-image.sh --image Armbian.img --hostname worker0 --ssh-key ~/.ssh/id_ed25519.pub --password yourpassword
+sudo ./scripts/configure-image.sh --image Armbian.img --hostname node0 --ssh-key ~/.ssh/id_ed25519.pub --password yourpassword
 ```
 
 The script supports these hostname patterns:
 - `controlplane` - The main control plane node (only one)
 - `controlplane[0-9]` - Additional control plane nodes (for HA setups)
-- `worker[0-9]` - Worker nodes
+- `node[0-9]` - Worker nodes
 
 #### 3. 📱 Boot Your Raspberry Pi
 
@@ -154,7 +154,7 @@ The Pi will automatically execute the appropriate bootstrap script to either ini
 
 ## 🔧 Additional Configuration
 
-#### 🌐 DHCP reservations
+### 🌐 DHCP reservations
 
 Once you've checked everything is running and your cluster is here to stay, it is a good idea to add a DHCP reservation in your router for the various nodes, in case they reboot.
 
