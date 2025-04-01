@@ -38,7 +38,7 @@ cat /root/kubeadm/kubeadm-init.yaml >> $LOG_FILE
 
 # Initialize the cluster with the configuration file
 log "Running kubeadm init with configuration"
-kubeadm init --config=/root/kubeadm/kubeadm-init.yaml --upload-certs
+kubeadm init --config=/root/kubeadm/kubeadm-init.yaml --upload-certs --skip-phases=addon/kube-proxy
 
 # Install required components
 log "Installing cilium"
