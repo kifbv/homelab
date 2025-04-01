@@ -154,6 +154,25 @@ The Pi will automatically execute the appropriate bootstrap script to either ini
 
 ## 🔧 Additional Configuration
 
+### 🔑 Retrieving the Kubeconfig File
+
+After your cluster is up and running, you'll need to retrieve the kubeconfig file from the control plane node to manage your cluster from your local machine:
+
+```bash
+# Copy the kubeconfig file from the control plane
+scp pi@<YOUR_CONTROLPLANE_IP>:/home/pi/.kube/config ~/.kube/config-rpi-cluster
+
+# Use the new kubeconfig
+export KUBECONFIG=~/.kube/config-rpi-cluster
+```
+
+You can now verify that everything is working correctly:
+
+```bash
+kubectl get nodes
+kubectl get pods -A
+```
+
 ### 🌐 DHCP reservations
 
 Once you've checked everything is running and your cluster is here to stay, it is a good idea to add a DHCP reservation in your router for the various nodes, in case they reboot.
