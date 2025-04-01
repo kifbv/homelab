@@ -45,6 +45,40 @@ log "Installing cilium"
 export KUBECONFIG=/etc/kubernetes/admin.conf
 sleep 5 && helm install --repo https://helm.cilium.io/ cilium cilium --namespace kube-system --set kubeProxyReplacement=true --set k8sServiceHost=$HOST_IP --set k8sServicePort=6443 --set hubble.relay.enabled=true --set hubble.ui.enabled=true
 
+log "Setting up CSR auto-approval script"
+cat <<EOF > /usr/bin/approve-kubelet-csrs.sh
+#!/bin/bash
+# Script to auto-approve kubelet serving certificate CSRs
+# Will run for 24 hours and then exit
+
+LOGFILE="/var/log/approve-kubelet-csrs.log"
+END_TIME=\$(( \$(date +%s) + 86400 ))  # Current time + 24 hours (86400 seconds)
+
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting CSR approval script. Will run for 24 hours." > \$LOGFILE
+
+while [ \$(date +%s) -lt \$END_TIME ]; do
+  # Get pending kubelet-serving CSRs and approve them
+  PENDING_CSRS=\$(kubectl get csr -o go-template='{{range .items}}{{if and (eq .spec.signerName "kubernetes.io/kubelet-serving") (eq .status.conditions nil)}}{{.metadata.name}}{{"\n"}}{{end}}{{end}}')
+  
+  if [ -n "\$PENDING_CSRS" ]; then
+    for CSR in \$PENDING_CSRS; do
+      kubectl certificate approve \$CSR
+      echo "[$(date '+%Y-%m-%d %H:%M:%S')] Approved CSR: \$CSR" >> \$LOGFILE
+    done
+  fi
+  
+  # Check every 10 seconds
+  sleep 10
+done
+
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] CSR approval script completed its 24-hour run." >> \$LOGFILE
+EOF
+
+chmod +x /usr/bin/approve-kubelet-csrs.sh
+
+log "Starting CSR approval script in background"
+nohup /usr/bin/approve-kubelet-csrs.sh &
+
 log "Setting up flux"
 sleep 5 && kubectl apply -f https://github.com/controlplaneio-fluxcd/flux-operator/releases/latest/download/install.yaml
 sleep 5 && kubectl create secret generic flux-sops --namespace=flux-system --from-file=age.agekey=/root/keys.txt
