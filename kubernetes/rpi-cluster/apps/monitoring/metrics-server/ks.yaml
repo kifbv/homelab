@@ -6,12 +6,16 @@ metadata:
   namespace: flux-system
 spec:
   #dependsOn:
+  #  - name: kube-prometheus-stack-crds
+  #dependsOn:
   #- name: kube-prometheus-controllers
   interval: 1h0m0s
   path: ./kubernetes/rpi-cluster/apps/monitoring/metrics-server/app
   prune: true
+  retryInterval: 1m
   sourceRef:
     kind: GitRepository
     name: flux-system
+  targetNamespace: monitoring
   timeout: 2m0s
   wait: true
