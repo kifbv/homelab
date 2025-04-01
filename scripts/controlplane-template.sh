@@ -20,9 +20,12 @@ sleep 5
 
 # Get configuration values
 log "Retrieving configuration values"
-TOKEN="$(cat /root/kubeadm-init-token)"
-CERT_KEY="$(cat /root/kubeadm-cert-key)"
-HOST_IP="$(ip -4 -o addr show end0 | tr -s ' ' | cut -f4 -d' ' | cut -f1 -d/)"
+export TOKEN="$(cat /root/kubeadm-init-token)"
+export CERT_KEY="$(cat /root/kubeadm-cert-key)"
+export HOST_IP="$(ip -4 -o addr show end0 | tr -s ' ' | cut -f4 -d' ' | cut -f1 -d/)"
+log "TOKEN: $TOKEN"
+log "CERT_KEY: $CERT_KEY"
+log "HOST_IP: $HOST_IP"
 
 # Initialize the first control plane
 log "This is the first control plane"
