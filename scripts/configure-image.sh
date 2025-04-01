@@ -211,7 +211,7 @@ elif [[ "$NEW_HOSTNAME" =~ ^controlplane[0-9]$ ]]; then
     cp "$(dirname "$0")/controlplane-secondary-template.sh" "$MOUNT_DIR/usr/bin/k8s-firstboot.sh"
 elif [[ "$NEW_HOSTNAME" =~ ^node[0-9]$ ]]; then
     # Worker nodes
-    cp "$(dirname "$0")/worker-template.sh" "$MOUNT_DIR/usr/bin/k8s-firstboot.sh"
+    cp "$(dirname "$0")/node-template.sh" "$MOUNT_DIR/usr/bin/k8s-firstboot.sh"
 else
     # This should never happen due to validation above
     echo "Error: Unrecognized hostname pattern: $NEW_HOSTNAME" >&2
