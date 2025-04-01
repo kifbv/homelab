@@ -59,4 +59,4 @@ chown $(id -u pi):$(id -g pi) /home/pi/.kube/config
 log "Disable service to avoid issue in case of reboot"
 systemctl disable k8s-firstboot.service
 log "Remove install files from /root/"
-rm -f /root/*
+#rm -f /root/*
