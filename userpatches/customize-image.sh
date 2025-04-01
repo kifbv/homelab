@@ -68,7 +68,7 @@ echo "deb [arch=arm64 signed-by=/etc/apt/keyrings/helm.gpg] https://baltocdn.com
 log "Installing Kubernetes components (+ git & vim )"
 #TODO: remove nftables if kube-proxy not used
 apt update --quiet || { log "Failed to update apt after adding repositories"; exit 1; }
-apt install --quiet --yes kubelet kubeadm kubectl cri-o nftables vim git helm || \
+apt install --quiet --yes kubelet kubeadm kubectl cri-o nftables vim git helm gettext-base || \
 	{ log "Failed to install Kubernetes components"; exit 1; }
 
 # Pin versions to prevent accidental upgrades
