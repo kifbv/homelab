@@ -152,6 +152,21 @@ The Pi will automatically execute the appropriate bootstrap script to either ini
      --discovery-token-ca-cert-hash sha256:<hash>
    ```
 
+3. Manually approve the pending CSR for the worker node:
+   ```bash
+   # View all certificate signing requests
+   kubectl get csr
+   
+   # Look for pending CSRs with type kubernetes.io/kubelet-serving for your node
+   # The CSR will appear as "Pending" in the CONDITION column
+   
+   # Approve the specific CSR
+   kubectl certificate approve <csr-name>
+   
+   # Verify the CSR is now approved
+   kubectl get csr
+   ```
+
 ## 🔧 Additional Configuration
 
 ### 🌐 DHCP reservations
