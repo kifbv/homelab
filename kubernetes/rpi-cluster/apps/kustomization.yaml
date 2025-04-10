@@ -3,4 +3,4 @@ kind: Kustomization
 resources:
   - home
   - monitoring
-  - istio
+  #- istio
