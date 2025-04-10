@@ -1,0 +1,51 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: istio-ambient
+  namespace: flux-system
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: ztunnel
+      version: 1.21.0
+      sourceRef:
+        kind: HelmRepository
+        name: istio
+        namespace: flux-system
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    ztunnel:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+        limits:
+          cpu: 300m
+          memory: 256Mi
+      configPatches:
+        - op: replace
+          path: /network
+          value:
+            protocol_selection: HBONE
+            support_protocol_selection_policy: true
+            waypoint_server_connection_pool: true
+            tunnel:
+              inbound_connection_max_idle_timeout: 30s
+              outbound_connection_max_idle_timeout: 30s
+        - op: replace
+          path: /security
+          value:
+            cert_provider: istiod
+            tls:
+              enabled: true
+              mode: MUTUAL
+  dependsOn:
+    - name: istiod
+  targetNamespace: istio-system
