@@ -6,7 +6,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 1h
-  path: ./kubernetes/rpi-cluster/apps/monitor/kube-prometheus-stack/crds
+  path: ./kubernetes/rpi-cluster/apps/monitoring/kube-prometheus-stack/crds
   prune: true
   retryInterval: 2m
   sourceRef:
