@@ -15,6 +15,10 @@ spec:
       version: 3.12.x
   interval: 1m0s
   values:
+    apiService:
+      insecureSkipTLSVerify: false
+    tls:
+      type: helm
     metrics:
       enabled: true
     serviceMonitor:
