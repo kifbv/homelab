@@ -5,12 +5,15 @@ metadata:
   name: homepage
   namespace: flux-system
 spec:
+  dependsOn:
+    - name: metrics-server
   interval: 1h
-  retryInterval: 2m
-  timeout: 10m
+  path: ./kubernetes/rpi-cluster/apps/home/homepage/app
   prune: true
-  wait: true
+  retryInterval: 2m
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./kubernetes/rpi-cluster/apps/home/homepage/app
+  targetNamespace: home
+  timeout: 5m
+  wait: true

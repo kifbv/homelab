@@ -185,7 +185,7 @@ spec:
     kind: GitRepository
     url: "$(git remote get-url origin)"
     ref: "refs/heads/main"
-    path: "kubernetes/rpi-cluster"
+    path: "kubernetes/rpi-cluster/flux/config"
   kustomize:
     patches:
       - patch: |

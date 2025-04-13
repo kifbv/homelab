@@ -7,18 +7,20 @@ spec:
   chart:
     spec:
       chart: homepage
+      interval: 30m
       reconcileStrategy: ChartVersion
       sourceRef:
         kind: HelmRepository
         name: jameswynn
-  interval: 1m0s
+        namespace: flux-system
+  interval: 30m
   values:
     config:
       bookmarks:
         - Developer:
             - Github:
                 - abbr: GH
-                  href: https://github.com/
+                  href: https://github.com/kifbv
       services:
         - My First Group:
             - My First Service:

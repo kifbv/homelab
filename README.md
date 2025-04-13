@@ -16,7 +16,7 @@ A complete Kubernetes homelab setup running on Raspberry Pi 5 boards with GitOps
 - 🚢 [flux CLI](https://fluxcd.io/docs/installation/) - To inspect and manage the Flux installation (optional)
 - 🔄 [cilium CLI](https://docs.cilium.io/en/stable/gettingstarted/k8s-install-default/#install-the-cilium-cli) - To inspect and manage the Cilium installation (optional)
 - 🍓 One or more Raspberry Pi 5 boards with at least 8GB RAM recommended
-- 🧠 microSD cards (32GB+ recommended) or USB/NVMe storage
+- 🧠 microSD cards (32GB+ recommended) or USB/NVMe storage 😎
 
 ## 🚀 Installation
 
@@ -81,7 +81,7 @@ The script supports these hostname patterns:
 
 #### 3. 📱 Boot Your Raspberry Pi
 
-Burn the image to your storage device using the provided command:
+Burn the image to your storage device using the provided command e.g.:
 
 ```bash
 sudo dd bs=4M conv=fsync oflag=direct status=progress if=Armbian.img of=/dev/mmcblk0

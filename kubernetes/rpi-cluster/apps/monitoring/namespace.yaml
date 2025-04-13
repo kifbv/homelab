@@ -4,4 +4,3 @@ metadata:
   name: monitoring
   labels:
     app.kubernetes.io/component: monitoring
-    pod-security.kubernetes.io/enforce: privileged
