@@ -42,8 +42,13 @@ kubeadm init --config=/root/kubeadm/kubeadm-init.yaml --upload-certs --skip-phas
 
 # Install required components
 log "Installing cilium"
+mkdir -p /root/cilium
+envsubst < /root/cilium-values.yaml.tpl > /root/cilium/values.yaml
+cat /root/cilium/values.yaml >> $LOG_FILE
 export KUBECONFIG=/etc/kubernetes/admin.conf
-sleep 5 && helm install --repo https://helm.cilium.io/ cilium cilium --namespace kube-system --set kubeProxyReplacement=true --set k8sServiceHost=$HOST_IP --set k8sServicePort=6443 --set hubble.relay.enabled=true --set hubble.ui.enabled=true
+# required for gateway support
+sleep 5 && kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/standard-install.yaml
+sleep 5 && helm install cilium cilium --repo https://helm.cilium.io/ --namespace kube-system -f /root/cilium/values.yaml
 
 log "Setting up CSR auto-approval script"
 cat <<EOF > /usr/bin/approve-kubelet-csrs.sh

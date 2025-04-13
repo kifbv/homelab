@@ -208,6 +208,8 @@ if [[ "$NEW_HOSTNAME" == "controlplane" ]]; then
     cp "$(dirname "$0")/controlplane-template.sh" "$MOUNT_DIR/usr/bin/k8s-firstboot.sh"
     # Copy kubeadm configuration template
     cp "$(dirname "$0")/kubeadm-init.yaml.tpl" "$MOUNT_DIR/root/kubeadm-init.yaml.tpl"
+    # Copy cilium configuration template
+    cp "$(dirname "$0")/cilium-values.yaml.tpl" "$MOUNT_DIR/root/cilium-values.yaml.tpl"
 elif [[ "$NEW_HOSTNAME" =~ ^controlplane[0-9]$ ]]; then
     # Additional control plane nodes
     cp "$(dirname "$0")/controlplane-secondary-template.sh" "$MOUNT_DIR/usr/bin/k8s-firstboot.sh"
