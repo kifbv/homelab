@@ -46,8 +46,10 @@ mkdir -p /root/cilium
 envsubst < /root/cilium-values.yaml.tpl > /root/cilium/values.yaml
 cat /root/cilium/values.yaml >> $LOG_FILE
 export KUBECONFIG=/etc/kubernetes/admin.conf
-# required for gateway support
+# Gateway API CRDs must be installed prior to installing Cilium
 sleep 5 && kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/standard-install.yaml
+sleep 5 && kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/experimental-install.yaml
+# Install Cilium
 sleep 5 && helm install cilium cilium --repo https://helm.cilium.io/ --namespace kube-system -f /root/cilium/values.yaml
 
 log "Setting up CSR auto-approval script"
