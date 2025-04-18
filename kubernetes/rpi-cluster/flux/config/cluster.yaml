@@ -14,6 +14,8 @@ spec:
     name: flux-system
   decryption:
     provider: sops
+    secretRef:
+      name: flux-sops
   #postBuild:
   #  substituteFrom:
   #    - kind: ConfigMap
@@ -38,6 +40,8 @@ spec:
     name: flux-system
   decryption:
     provider: sops
+    secretRef:
+      name: flux-sops
   postBuild:
     substituteFrom:
       #- kind: ConfigMap
@@ -63,6 +67,8 @@ spec:
     - name: cluster-repositories
   decryption:
     provider: sops
+    secretRef:
+      name: flux-sops
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -81,6 +87,8 @@ spec:
     #- name: cluster-settings
   decryption:
     provider: sops
+    secretRef:
+      name: flux-sops
   #postBuild:
   #  substituteFrom:
   #    - name: cluster-settings
