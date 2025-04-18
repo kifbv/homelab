@@ -1,0 +1,19 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: porkbun-webhook
+  namespace: flux-system
+spec:
+  chart:
+    spec:
+      chart: ./deploy/porkbun-webhook
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: GitRepository
+        name: porkbun-webhook
+  interval: 10m0s
+  values:
+    groupName: security.k8s-homelab.dev
+    certManager:
+      namespace: security
