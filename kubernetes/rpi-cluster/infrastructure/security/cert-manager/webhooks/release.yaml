@@ -18,3 +18,7 @@ spec:
     groupName: security.k8s-homelab.dev
     certManager:
       namespace: security
+    image:
+      repository: fratier/porkbun-webhook
+      tag: arm64-1.0
+      pullPolicy: IfNotPresent
