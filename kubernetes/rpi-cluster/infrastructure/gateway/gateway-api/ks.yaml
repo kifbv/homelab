@@ -5,13 +5,10 @@ metadata:
   name: gateway-api-crds
   namespace: flux-system
 spec:
-  decryption:
-    provider: sops
   interval: 10m
   path: "./kubernetes/rpi-cluster/infrastructure/gateway/gateway-api/crds"
   prune: true
   sourceRef:
     kind: GitRepository
     name: flux-system
-  targetNamespace: gateway
   wait: true
