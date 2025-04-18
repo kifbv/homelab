@@ -30,19 +30,21 @@ spec:
   wait: true
   dependsOn:
     - name: cert-manager
-#---
-#apiVersion: kustomize.toolkit.fluxcd.io/v1
-#kind: Kustomization
-#metadata:
-#  name: cert-manager-issuers
-#  namespace: flux-system
-#spec:
-#  interval: 10m
-#  path: "./kubernetes/rpi-cluster/infrastructure/security/cert-manager/issuers"
-#  prune: true
-#  sourceRef:
-#    kind: GitRepository
-#    name: flux-system
-#  wait: true
-#  dependsOn:
-#    - name: cert-manager
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cert-manager-issuers
+  namespace: flux-system
+spec:
+  interval: 10m
+  path: "./kubernetes/rpi-cluster/infrastructure/security/cert-manager/issuers"
+  prune: true
+  postBuild:
+    substituteFrom: []
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  wait: true
+  dependsOn:
+    - name: cert-manager-webhooks
