@@ -46,5 +46,9 @@ spec:
     kind: GitRepository
     name: flux-system
   wait: true
+  decryption:
+    provider: sops
+    secretRef:
+      name: flux-sops
   dependsOn:
     - name: cert-manager-webhooks
