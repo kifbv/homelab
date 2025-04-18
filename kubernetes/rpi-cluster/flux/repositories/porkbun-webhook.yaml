@@ -8,4 +8,4 @@ spec:
   interval: 1m0s
   ref:
     branch: main
-  url: https://github.com/mdonoughe/porkbun-webhook/tree/main/deploy/porkbun-webhook
+  url: https://github.com/mdonoughe/porkbun-webhook/
