@@ -69,6 +69,14 @@ spec:
     provider: sops
     secretRef:
       name: flux-sops
+  postBuild:
+    substituteFrom:
+      #- kind: ConfigMap
+      #  name: cluster-settings
+      #  optional: true
+      - kind: Secret
+        name: cluster-secrets
+        optional: true
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
