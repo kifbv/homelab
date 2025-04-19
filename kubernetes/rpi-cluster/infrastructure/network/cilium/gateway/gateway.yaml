@@ -15,6 +15,7 @@ spec:
       allowedRoutes:
         namespaces:
           from: Selector
+          selector:
             matchLabel:
               networking.kubernetes.io/shared-gateway-access: "true"
       tls:
