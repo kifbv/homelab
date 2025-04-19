@@ -23,15 +23,3 @@ spec:
         certificateRefs:
         - kind: Secret
           name: "wildcard-internal-tls"
----
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: "wildcard-internal"
-spec:
-  secretName: "wildcard-internal-tls"
-  issuerRef:
-    name: letsencrypt-prod
-    kind: ClusterIssuer
-  dnsNames:
-    - "*.${INTERNAL_DOMAIN}"
