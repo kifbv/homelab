@@ -1,0 +1,11 @@
+---
+apiVersion: "cilium.io/v2alpha1"
+kind: CiliumL2AnnouncementPolicy
+metadata:
+  name: internal-l2announcement-policy
+  namespace: kube-system
+spec:
+  interfaces:
+    - ^end[0-9]+ # host interface regex
+  externalIPs: true
+  loadBalancerIPs: true
