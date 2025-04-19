@@ -1,0 +1,36 @@
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: Gateway
+metadata:
+  name: private-gateway
+spec:
+  gatewayClassName: cilium
+  addresses:
+    - value: "${PRIVATE_GATEWAY_ADDRESS}"
+  listeners:
+    - name: internal-https
+      port: 443
+      protocol: HTTPS
+      hostname: "*.${INTERNAL_DOMAIN}"
+      allowedRoutes:
+        namespaces:
+          from: Selector
+            matchLabel:
+              networking.kubernetes.io/shared-gateway-access: "true"
+      tls:
+        mode: Terminate
+        certificateRefs:
+        - kind: Secret
+          name: "wildcard-internal-tls"
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: "wildcard-internal"
+spec:
+  secretName: "wildcard-internal-tls"
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - "*.${INTERNAL_DOMAIN}"
