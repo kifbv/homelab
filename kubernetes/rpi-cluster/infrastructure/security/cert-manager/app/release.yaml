@@ -22,7 +22,7 @@ spec:
   values:
     #certManager:
     #  namespace: security
-    #clusterResourceNamespace: security
+    clusterResourceNamespace: security
     crds:
       enabled: true
       keep: true
