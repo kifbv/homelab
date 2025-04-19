@@ -16,7 +16,7 @@ spec:
         namespaces:
           from: Selector
           selector:
-            matchLabel:
+            matchLabels:
               networking.kubernetes.io/shared-gateway-access: "true"
       tls:
         mode: Terminate
