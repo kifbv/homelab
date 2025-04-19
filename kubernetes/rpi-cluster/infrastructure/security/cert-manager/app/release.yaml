@@ -20,6 +20,8 @@ spec:
   upgrade:
     crds: CreateReplace
   values:
+    # needed when generating certificates from different namespaces
+    clusterResourceNamespace: security
     crds:
       enabled: true
       keep: true
