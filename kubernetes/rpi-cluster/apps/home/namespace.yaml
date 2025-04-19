@@ -5,3 +5,4 @@ metadata:
   name: home
   labels:
     app.kubernetes.io/component: home
+    networking.kubernetes.io/shared-gateway-access: "true"
