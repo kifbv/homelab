@@ -4,7 +4,7 @@ data:
 kind: ConfigMap
 metadata:
     creationTimestamp: null
-    name: cluster-config
+    name: cluster-settings
     namespace: flux-system
 sops:
     kms: []
