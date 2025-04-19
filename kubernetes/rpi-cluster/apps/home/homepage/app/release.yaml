@@ -64,6 +64,11 @@ spec:
 
     # This enables the service account to access the necessary resources
     enableRbac: true
+    
+    # This value must be set
+    env:
+      - name: HOMEPAGE_ALLOWED_HOSTS
+        value: "homepage.${INTERNAL_DOMAIN}"
 
     #ingress:
     #  main:
