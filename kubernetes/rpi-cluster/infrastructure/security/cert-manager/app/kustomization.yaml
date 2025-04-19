@@ -4,3 +4,4 @@ kind: Kustomization
 namespace: security
 resources:
   - ./release.yaml
+  - ./rbac.yaml
