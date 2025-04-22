@@ -197,6 +197,19 @@ spec:
                 name: flux-sops
         target:
           kind: Kustomization
+      - patch: |
+          - op: add
+            path: /spec/template/spec/containers/0/args/-
+            value: --concurrent=4
+          - op: replace
+            path: /spec/template/spec/volumes/0
+            value:
+              name: temp
+              emptyDir:
+                medium: Memory
+        target:
+          kind: Deployment
+          name: kustomize-controller
 EOF
 
 # Create bootstrap script based on hostname
