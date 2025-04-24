@@ -65,7 +65,7 @@ echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.
 echo "deb [signed-by=/etc/apt/keyrings/cri-o-apt-keyring.gpg] https://pkgs.k8s.io/addons:/cri-o:/stable:/$CRIO_VERSION/deb/ /" | tee /etc/apt/sources.list.d/cri-o.list
 echo "deb [arch=arm64 signed-by=/etc/apt/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" | tee /etc/apt/sources.list.d/helm-stable-debian.list
 
-log "Installing Kubernetes components (+ git & vim )"
+log "Installing useful packages"
 #TODO: remove nftables if kube-proxy not used
 apt update --quiet || { log "Failed to update apt after adding repositories"; exit 1; }
 apt install --quiet --yes kubelet kubeadm kubectl cri-o nftables vim git helm gettext-base || \

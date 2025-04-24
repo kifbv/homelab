@@ -47,11 +47,13 @@ envsubst < /root/cilium-values.yaml.tpl > /root/cilium/values.yaml
 cat /root/cilium/values.yaml >> $LOG_FILE
 export KUBECONFIG=/etc/kubernetes/admin.conf
 # Gateway API CRDs must be installed prior to installing Cilium
+# TODO: install basic cilium cni first and move them to flux install
 sleep 5 && kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/standard-install.yaml
 sleep 5 && kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/experimental-install.yaml
 # Install Cilium
 sleep 5 && helm install cilium cilium --repo https://helm.cilium.io/ --namespace kube-system -f /root/cilium/values.yaml
 
+# TODO: use kubelet-csr-approver instead
 log "Setting up CSR auto-approval script"
 cat <<EOF > /usr/bin/approve-kubelet-csrs.sh
 #!/bin/bash
