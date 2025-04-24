@@ -1,0 +1,49 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: rook-ceph-operator
+  namespace: storage
+spec:
+  chart:
+    spec:
+      chart: rook-ceph-cluster
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: rook-ceph
+        namespace: flux-system
+      version: 1.17.x
+  interval: 1h0m0s
+  # values for test cluster (1 node only)
+  values:
+    toolbox:
+      enabled: true
+    operatorNamespace: storage
+    cephBlockPools:
+      - name: ceph-blockpool
+        spec:
+          failureDomain: host
+          replicated:
+            size: 1
+    cephClusterSpecr:
+      skipUpgradeChecks: false
+      mon:
+        allowMultiplePerNode: true
+        count: 1
+      mgr:
+        count: 1
+        allowMultiplePerNode: true
+        modules:
+          - name: rook
+            enabled: true
+      dashboard:
+        enabled: true
+      crashCollector:
+        disable: true
+      storage:
+        useAllNodes: true
+        useAllDevices: true
+    monitoring:
+      enabled: false
+
