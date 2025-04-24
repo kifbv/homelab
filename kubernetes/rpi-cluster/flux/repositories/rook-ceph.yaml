@@ -6,4 +6,4 @@ metadata:
   namespace: flux-system
 spec:
   interval: 10m0s
-  url: https://charts.rook.io/
+  url: https://charts.rook.io/release
