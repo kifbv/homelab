@@ -19,18 +19,14 @@ spec:
   values:
     toolbox:
       enabled: true
+
     operatorNamespace: storage
-    cephBlockPools:
-      - name: ceph-blockpool
-        spec:
-          failureDomain: host
-          replicated:
-            size: 1
+
     cephClusterSpec:
       skipUpgradeChecks: false
       mon:
-        allowMultiplePerNode: true
         count: 1
+        allowMultiplePerNode: true
       mgr:
         count: 1
         allowMultiplePerNode: true
@@ -44,6 +40,20 @@ spec:
       storage:
         useAllNodes: true
         useAllDevices: true
+
+    cephBlockPools:
+      - name: ceph-blockpool
+        spec:
+          failureDomain: host
+          replicated:
+            size: 1
+        storageClass:
+          enabled: true
+          name: ceph-block
+          isDefault: true
+          reclaimPolicy: Delete
+          allowVolumeExpansion: true
+
     monitoring:
       enabled: false
 
