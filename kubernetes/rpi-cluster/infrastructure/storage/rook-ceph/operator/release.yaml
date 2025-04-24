@@ -1,0 +1,20 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: rook-ceph
+  namespace: rook-ceph
+spec:
+  chart:
+    spec:
+      chart: rook-ceph
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: rook-ceph
+        namespace: flux-system
+      version: 1.17.x
+  interval: 30m0s
+  values:
+    monitoring:
+      enabled: false # TODO: enable monitoring :)
