@@ -15,7 +15,7 @@ spec:
         namespace: flux-system
       version: 1.17.x
   interval: 1h0m0s
-  # values for test cluster (1 node only)
+  # values for test cluster
   # TODO: install 2 more nodes :)
   values:
     monitoring:
@@ -30,10 +30,10 @@ spec:
       dataDirHostPath: /var/lib/rook
       skipUpgradeChecks: true
       mon:
-        count: 3
+        count: 2
         allowMultiplePerNode: true
       mgr:
-        count: 3
+        count: 2
         allowMultiplePerNode: true
         modules:
           - name: rook
@@ -43,8 +43,15 @@ spec:
       crashCollector:
         disable: true
       storage:
-        useAllNodes: true
-        useAllDevices: true
+        useAllNodes: false
+        useAllDevices: false
+        nodes:
+          - name: node1
+            devices:
+              - name: /dev/nvme0n1
+          - name: node2
+            devices:
+              - name: /dev/nvme0n1
       healthCheck:
         daemonHealth:
           mon:
