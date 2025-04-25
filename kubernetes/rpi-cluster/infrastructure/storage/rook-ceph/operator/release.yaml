@@ -17,4 +17,4 @@ spec:
   interval: 30m0s
   values:
     monitoring:
-      enabled: false # TODO: enable monitoring :)
+      enabled: false # TODO: enable monitoring (requires prometheus)
