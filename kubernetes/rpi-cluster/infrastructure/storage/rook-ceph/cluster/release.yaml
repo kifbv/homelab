@@ -16,14 +16,19 @@ spec:
       version: 1.17.x
   interval: 1h0m0s
   # values for test cluster (1 node only)
+  # TODO: install 2 more nodes :)
   values:
+    monitoring:
+      enabled: false
+
     toolbox:
       enabled: true
-
-    operatorNamespace: storage
+      
+    operatorNamespace: storage # operator installed in storage ns, not default rook-ceph
 
     cephClusterSpec:
-      skipUpgradeChecks: false
+      dataDirHostPath: /var/lib/rook
+      skipUpgradeChecks: true
       mon:
         count: 1
         allowMultiplePerNode: true
@@ -40,20 +45,8 @@ spec:
       storage:
         useAllNodes: true
         useAllDevices: true
-
-    cephBlockPools:
-      - name: ceph-blockpool
-        spec:
-          failureDomain: host
-          replicated:
-            size: 1
-        storageClass:
-          enabled: true
-          name: ceph-block
-          isDefault: true
-          reclaimPolicy: Delete
-          allowVolumeExpansion: true
-
-    monitoring:
-      enabled: false
+      healthCheck:
+        daemonHealth:
+          mon:
+            interval: 45s
 
