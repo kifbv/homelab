@@ -30,10 +30,10 @@ spec:
       dataDirHostPath: /var/lib/rook
       skipUpgradeChecks: true
       mon:
-        count: 2
+        count: 1
         allowMultiplePerNode: true
       mgr:
-        count: 2
+        count: 1
         allowMultiplePerNode: true
         modules:
           - name: rook
