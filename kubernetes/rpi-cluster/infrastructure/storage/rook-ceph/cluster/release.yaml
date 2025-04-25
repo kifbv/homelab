@@ -22,7 +22,7 @@ spec:
       enabled: false
     toolbox:
       enabled: true
-    operatorNamespace: storag # operator installed in storage ns, not default rook-ceph
+    operatorNamespace: storage # operator installed in storage ns, not default rook-ceph
     cephClusterSpec:
       mon:
         count: 2
