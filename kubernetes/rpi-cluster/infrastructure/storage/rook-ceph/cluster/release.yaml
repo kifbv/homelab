@@ -16,21 +16,16 @@ spec:
       version: 1.17.x
   interval: 1h0m0s
   # values for test cluster
-  # TODO: install 2 more nodes :)
+  # TODO: install more nodes :)
   values:
     monitoring:
       enabled: false
-
     toolbox:
       enabled: true
-      
-    operatorNamespace: storage # operator installed in storage ns, not default rook-ceph
-
+    operatorNamespace: storag # operator installed in storage ns, not default rook-ceph
     cephClusterSpec:
-      dataDirHostPath: /var/lib/rook
-      skipUpgradeChecks: true
       mon:
-        count: 1
+        count: 2
         allowMultiplePerNode: true
       mgr:
         count: 1
@@ -38,22 +33,7 @@ spec:
         modules:
           - name: rook
             enabled: true
-      dashboard:
-        enabled: true
-      crashCollector:
-        disable: true
       storage:
-        useAllNodes: false
+        useAllNodes: true
         useAllDevices: false
-        nodes:
-          - name: node1
-            devices:
-              - name: /dev/nvme0n1
-          - name: node2
-            devices:
-              - name: /dev/nvme0n1
-      healthCheck:
-        daemonHealth:
-          mon:
-            interval: 45s
-
+        deviceFilter: "^nvme0n1"
