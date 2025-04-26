@@ -24,7 +24,7 @@ spec:
       services:
         - My First Group:
             - My First Service:
-                href: http://localhost/
+                href: https://linkding.${INTERNAL_DOMAIN}
                 description: Homepage is awesome
 
         - My Second Group:
