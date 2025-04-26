@@ -15,3 +15,26 @@ spec:
   targetNamespace: monitoring
   timeout: 5m
   wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: kube-prometheus-stack
+  namespace: flux-system
+spec:
+  interval: 30m
+  path: ./kubernetes/rpi-cluster/apps/monitoring/kube-prometheus-stack/app
+  prune: true
+  retryInterval: 1m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  targetNamespace: monitoring
+  timeout: 5m
+  wait: true
+  decryption:
+    provider: sops
+  dependsOn:
+    - name: kube-prometheus-stack-crds
+    - name: cert-manager
+    - name: rook-ceph-cluster
