@@ -22,20 +22,16 @@ spec:
                 - abbr: GH
                   href: https://github.com/kifbv
       services:
-        - My First Group:
-            - My First Service:
+        - Home:
+            - Linkding:
                 href: https://linkding.${INTERNAL_DOMAIN}
                 description: Homepage is awesome
 
-        - My Second Group:
+        - Monitoring:
             - My Second Service:
                 href: http://localhost/
                 description: Homepage is the best
 
-        - My Third Group:
-            - My Third Service:
-                href: http://localhost/
-                description: Homepage is 😎
       widgets:
         # show the kubernetes widget, with the cluster summary and individual nodes
         - kubernetes:
