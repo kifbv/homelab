@@ -37,4 +37,4 @@ spec:
   dependsOn:
     - name: kube-prometheus-stack-crds
     - name: cert-manager
-    - name: rook-ceph-cluster
+    #- name: rook-ceph-cluster
