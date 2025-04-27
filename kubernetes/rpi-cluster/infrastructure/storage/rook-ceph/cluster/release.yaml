@@ -18,28 +18,74 @@ spec:
   # values for test cluster
   # TODO: install more nodes :)
   values:
-    monitoring:
-      enabled: false
+    # -- Namespace of the main rook operator
+    operatorNamespace: storage
+
+    # -- The metadata.name of the CephCluster CR (default -- The same as the namespace)
+    clusterName: rook-ceph
+    
+    # Installs a debugging toolbox deployment
     toolbox:
       enabled: true
-    operatorNamespace: storage # operator installed in storage ns, not default rook-ceph
+
+    monitoring:
+      # -- Enable Prometheus integration (requires Prometheus to be pre-installed)
+      enabled: false
+
+    # see https://artifacthub.io/packages/helm/rook/rook-ceph-cluster?modal=values
     cephClusterSpec:
+      dataDirHostPath: /var/lib/rook
+      cephVersion:
+        image: quay.io/ceph/ceph:v19
+        allowUnsupported: true
       mon:
         count: 1
         allowMultiplePerNode: true
+      skipUpgradeChecks: true
       mgr:
         count: 1
         allowMultiplePerNode: true
         modules:
           - name: rook
             enabled: true
+      dashboard:
+        enabled: true
+      crashCollector:
+        disable: true
       storage:
         #useAllNodes: true
         #useAllDevices: false
         #deviceFilter: "^nvme0n1"
         useAllNodes: false
         useAllDevices: false
+        allowDeviceClassUpdate: true
+        allowOsdCrushWeightUpdate: false
         nodes:
           - name: node1
             devices:
               - name: /dev/nvme0n1
+      monitoring:
+        enabled: false
+      healthCheck:
+        daemonHealth:
+          mon:
+            interval: 45s
+            timeout: 600s
+      priorityClassNames:
+        all: system-node-critical
+        mgr: system-cluster-critical
+      disruptionManagement:
+        managePodBudgets: true
+      cephConfig:
+        global:
+          osd_pool_default_size: "1"
+          mon_warn_on_pool_no_redundancy: "false"
+          bdev_flock_retry: "20"
+          bluefs_buffered_io: "false"
+          mon_data_avail_warn: "10"
+
+    cephBlockPools:
+      spec:
+        failureDomain: host
+        replicated:
+          size: 1
