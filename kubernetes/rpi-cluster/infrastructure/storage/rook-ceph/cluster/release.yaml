@@ -19,10 +19,10 @@ spec:
   # TODO: install more nodes :)
   values:
     # -- Namespace of the main rook operator
-    operatorNamespace: storage
+    #operatorNamespace: storage
 
     # -- The metadata.name of the CephCluster CR (default -- The same as the namespace)
-    clusterName: rook-ceph
+    #clusterName: rook-ceph
     
     # Installs a debugging toolbox deployment
     toolbox:
@@ -85,7 +85,28 @@ spec:
           mon_data_avail_warn: "10"
 
     cephBlockPools:
-      spec:
-        failureDomain: host
-        replicated:
-          size: 1
+      - name: ceph-blockpool
+        spec:
+          failureDomain: host
+          replicated:
+            size: 1
+
+    cephFileSystems:
+      - name: ceph-filesystem
+        spec:
+          metadataPool:
+            replicated:
+              size: 1
+          dataPools:
+            - failureDomain: host
+              replicated:
+                size: 1
+          name: data0
+
+    cephObjectStores:
+      - name: ceph-objectstore
+        spec:
+          metadataPool:
+            failureDomain: host
+            replicated:
+              size: 1

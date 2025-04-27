@@ -3,7 +3,7 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: rook-ceph
-  namespace: storage
+  namespace: rook-ceph
 spec:
   chart:
     spec:
@@ -16,5 +16,13 @@ spec:
       version: 1.17.x
   interval: 30m0s
   values:
+    # TODO: enable monitoring (requires prometheus)
     monitoring:
-      enabled: false # TODO: enable monitoring (requires prometheus)
+      enabled: false
+    # install crds as part of the helm release
+    crds:
+      enabled: true
+    resources:
+      requests:
+        memory: 128Mi # default value
+        cpu: 100m     # half the default value
