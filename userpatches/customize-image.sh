@@ -66,16 +66,16 @@ echo "deb [signed-by=/etc/apt/keyrings/cri-o-apt-keyring.gpg] https://pkgs.k8s.i
 echo "deb [arch=arm64 signed-by=/etc/apt/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" | tee /etc/apt/sources.list.d/helm-stable-debian.list
 
 log "Installing useful packages"
-#TODO: remove nftables if kube-proxy not used
+#TODO: add nftables if kube-proxy is used
 apt update --quiet || { log "Failed to update apt after adding repositories"; exit 1; }
-apt install --quiet --yes nftables vim git helm gettext-base || \
+apt install --quiet --yes vim git helm gettext-base || \
 	{ log "Failed to install Kubernetes components"; exit 1; }
 
-log "Installing required packages for longhorn"
-#TODO: remove if using rook/ceph
-apt update --quiet || { log "Failed to update apt after adding repositories"; exit 1; }
-apt install --quiet --yes open-iscsi nfs-common blkid || \
-	{ log "Failed to install Kubernetes components"; exit 1; }
+#TODO: add if using longhorn
+#log "Installing required packages for longhorn"
+#apt update --quiet || { log "Failed to update apt after adding repositories"; exit 1; }
+#apt install --quiet --yes open-iscsi nfs-common blkid || \
+#	{ log "Failed to install Kubernetes components"; exit 1; }
 
 log "Installing Kubernetes components"
 apt update --quiet || { log "Failed to update apt after adding repositories"; exit 1; }
