@@ -13,5 +13,4 @@ spec:
         kind: HelmRepository
         name: pascaliske
         namespace: flux-system
-      version: 2.0.x
   interval: 10m0s
