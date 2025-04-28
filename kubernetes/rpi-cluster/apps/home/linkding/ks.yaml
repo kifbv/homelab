@@ -9,6 +9,8 @@ spec:
     provider: sops
     secretRef:
       name: flux-sops
+  dependsOn:
+    - name: rook-ceph-cluster
   interval: 1h
   path: ./kubernetes/rpi-cluster/apps/home/linkding/app
   postBuild:
