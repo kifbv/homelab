@@ -10,7 +10,7 @@ spec:
     secretRef:
       name: flux-sops
   dependsOn:
-    - name: rook-ceph-cluster
+    - name: rook-ceph-rbd
   interval: 1h
   path: ./kubernetes/rpi-cluster/apps/home/linkding/app
   postBuild:
