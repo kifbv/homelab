@@ -14,3 +14,6 @@ spec:
         name: pascaliske
         namespace: flux-system
   interval: 10m0s
+  values:
+    persistentVolumeClaim:
+      storageClassName: rook-ceph-block
