@@ -34,6 +34,8 @@ spec:
   wait: true
   decryption:
     provider: sops
+    secretRef:
+      name: flux-sops
   dependsOn:
     - name: kube-prometheus-stack-crds
     - name: cert-manager
