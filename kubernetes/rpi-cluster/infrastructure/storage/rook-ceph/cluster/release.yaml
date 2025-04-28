@@ -68,6 +68,9 @@ spec:
     cephBlockPools:
       - name: ceph-blockpool
         spec:
+          storageClass:
+            enabled: true
+            name: ceph-block
           failureDomain: host
           replicated:
             size: 1
@@ -75,6 +78,9 @@ spec:
     cephFileSystems:
       - name: ceph-filesystem
         spec:
+          storageClass:
+            enabled: true
+            name: ceph-filesystem
           metadataPool:
             replicated:
               size: 1
@@ -86,6 +92,9 @@ spec:
     cephObjectStores:
       - name: ceph-objectstore
         spec:
+          storageClass:
+            enabled: true
+            name: ceph-bucket
           metadataPool:
             failureDomain: host
             replicated:
