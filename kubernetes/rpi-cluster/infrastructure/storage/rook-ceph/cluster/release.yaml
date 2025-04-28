@@ -36,9 +36,6 @@ spec:
     cephClusterSpec:
       dataDirHostPath: /var/lib/rook
       skipUpgradeChecks: true
-      cephVersion:
-        image: quay.io/ceph/ceph:v19
-        allowUnsupported: true
       mon:
         count: 1
         allowMultiplePerNode: true
@@ -52,6 +49,9 @@ spec:
         enabled: true
       crashCollector:
         disable: true
+      priorityClassNames:
+        all: system-node-critical
+        mgr: system-cluster-critical
       storage:
         #useAllNodes: true
         #useAllDevices: false
@@ -64,25 +64,6 @@ spec:
           - name: node1
             devices:
               - name: /dev/nvme0n1
-      monitoring:
-        enabled: false
-      healthCheck:
-        daemonHealth:
-          mon:
-            interval: 45s
-            timeout: 600s
-      priorityClassNames:
-        all: system-node-critical
-        mgr: system-cluster-critical
-      disruptionManagement:
-        managePodBudgets: true
-      cephConfig:
-        global:
-          osd_pool_default_size: "1"
-          mon_warn_on_pool_no_redundancy: "false"
-          bdev_flock_retry: "20"
-          bluefs_buffered_io: "false"
-          mon_data_avail_warn: "10"
 
     cephBlockPools:
       - name: ceph-blockpool
@@ -101,7 +82,6 @@ spec:
             - failureDomain: host
               replicated:
                 size: 1
-          name: data0
 
     cephObjectStores:
       - name: ceph-objectstore
