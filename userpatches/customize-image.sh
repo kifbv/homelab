@@ -68,7 +68,7 @@ echo "deb [arch=arm64 signed-by=/etc/apt/keyrings/helm.gpg] https://baltocdn.com
 log "Installing useful packages"
 #TODO: add nftables if kube-proxy is used
 apt update --quiet || { log "Failed to update apt after adding repositories"; exit 1; }
-apt install --quiet --yes vim git helm gettext-base || \
+apt install --quiet --yes vim git helm gettext-base nvme-cli || \
 	{ log "Failed to install Kubernetes components"; exit 1; }
 
 #TODO: add if using longhorn
