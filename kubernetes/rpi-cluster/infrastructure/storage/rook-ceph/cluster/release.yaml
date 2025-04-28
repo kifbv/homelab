@@ -19,10 +19,10 @@ spec:
   # TODO: install more nodes :)
   values:
     # -- Namespace of the main rook operator
-    #operatorNamespace: storage
+    operatorNamespace: storage
 
     # -- The metadata.name of the CephCluster CR (default -- The same as the namespace)
-    #clusterName: rook-ceph
+    clusterName: rook-ceph
     
     # Installs a debugging toolbox deployment
     toolbox:
@@ -35,13 +35,13 @@ spec:
     # see https://artifacthub.io/packages/helm/rook/rook-ceph-cluster?modal=values
     cephClusterSpec:
       dataDirHostPath: /var/lib/rook
+      skipUpgradeChecks: true
       cephVersion:
         image: quay.io/ceph/ceph:v19
         allowUnsupported: true
       mon:
         count: 1
         allowMultiplePerNode: true
-      skipUpgradeChecks: true
       mgr:
         count: 1
         allowMultiplePerNode: true
