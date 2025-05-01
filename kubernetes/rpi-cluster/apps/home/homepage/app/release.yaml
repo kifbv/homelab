@@ -24,13 +24,19 @@ spec:
       services:
         - Home:
             - Linkding:
+                icon: linkding.png
                 href: https://linkding.${INTERNAL_DOMAIN}
-                description: Homepage is awesome
+                description: Bookmarks manager
 
         - Monitoring:
-            - My Second Service:
-                href: http://localhost/
-                description: Homepage is the best
+            - Grafana:
+                icon: grafana.png
+                href: https://grafana.${INTERNAL_DOMAIN}
+                description: Observability & data visualisation
+            #- Prometheus:
+            #    icon: prometheus.png
+            #    href: https://prometheus.${INTERNAL_DOMAIN}
+            #    description: Monitoring system & time series database
 
       widgets:
         # show the kubernetes widget, with the cluster summary and individual nodes
@@ -52,6 +58,7 @@ spec:
       kubernetes:
         mode: cluster
       settings:
+        gateway: true
 
     # The service account is necessary to allow discovery of other services
     serviceAccount:
