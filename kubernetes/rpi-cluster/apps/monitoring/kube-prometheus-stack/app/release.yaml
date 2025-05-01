@@ -12,6 +12,7 @@ spec:
         kind: HelmRepository
         name: prometheus-community
         namespace: flux-system
+      version: 71.1.x
   install:
     crds: Skip
   interval: 30m0s
@@ -22,7 +23,7 @@ spec:
     cleanPrometheusOperatorObjectNames: true
 
     crds:
-      enabled: false
+      enabled: false # installed separately
 
     alertmanager:
       enabled: true
@@ -38,12 +39,6 @@ spec:
           - action: drop
             sourceLabels: ["__name__"]
             regex: (apiserver_response_sizes_bucket|apiserver_watch_events_sizes_bucket)
-
-    kubeControllerManager:
-      enabled: false
-
-    kubeEtcd:
-      enabled: false
 
     kubelet:
       enabled: true
@@ -61,16 +56,12 @@ spec:
     kubeProxy:
       enabled: false
 
-    kubeScheduler:
-      enabled: false
-
-    kubeStateMetrics:
-      enabled: false
-
-    nodeExporter:
-      enabled: false
-
-    #grafana:
+    grafana:
+      additionalDataSources:
+        - name: Loki
+          type: loki
+          url: http://loki-gateway.monitoring.svc.cluster.local
+          access: proxy
     #  enabled: false
     #  forceDeployDashboards: true
     #  sidecar:
