@@ -19,6 +19,8 @@ spec:
     # nr of replicas
     singleBinary:
       replicas: 1
+      persistence:
+        storageClass: rook-ceph-block
     write:
       replicas: 0
     read:
