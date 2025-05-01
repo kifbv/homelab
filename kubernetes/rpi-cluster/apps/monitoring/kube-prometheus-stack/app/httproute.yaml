@@ -36,3 +36,27 @@ spec:
     - kind: Service
       name: kube-prometheus-stack-grafana
       port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: prometheus
+  namespace: monitoring
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/description: "Monitoring system & time series DB"
+    gethomepage.dev/group: Monitoring
+    gethomepage.dev/icon: prometheus.png
+    gethomepage.dev/name: Prometheus
+spec:
+  hostnames:
+  - "prometheus.${INTERNAL_DOMAIN}"
+  parentRefs:
+  - kind: Gateway
+    name: private-gateway
+    namespace: network
+  rules:
+  - backendRefs:
+    - kind: Service
+      name: kube-prometheus-stack-prometheus
+      port: 9090
