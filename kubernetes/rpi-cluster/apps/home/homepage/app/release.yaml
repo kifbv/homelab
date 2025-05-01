@@ -57,8 +57,8 @@ spec:
             target: _blank
       kubernetes:
         mode: cluster
-      settings:
         gateway: true
+      settings:
 
     # The service account is necessary to allow discovery of other services
     serviceAccount:
