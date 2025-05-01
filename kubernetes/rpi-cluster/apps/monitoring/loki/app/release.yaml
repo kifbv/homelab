@@ -16,25 +16,10 @@ spec:
   interval: 30m0s
   values:
     deploymentMode: SingleBinary
-    # nr of replicas
     singleBinary:
       replicas: 1
       persistence:
         storageClass: rook-ceph-block
-    write:
-      replicas: 0
-    read:
-      replicas: 0
-    backend:
-      replicas: 0
-    # caching
-    chunksCache:
-      enabled: false
-    resultsCache:
-      enabled: false
-    # helm test
-    test:
-      enabled: false
     # loki settings
     loki:
       auth_enabled: false
@@ -45,3 +30,36 @@ spec:
         filesystem:
           directory: /var/loki/chunks
       useTestSchema: true
+    # nr of replicas
+    write:
+      replicas: 0
+    read:
+      replicas: 0
+    backend:
+      replicas: 0
+    ingester:
+      replicas: 0
+    querier:
+      replicas: 0
+    queryFrontend:
+      replicas: 0
+    queryScheduler:
+      replicas: 0
+    distributor:
+      replicas: 0
+    compactor:
+      replicas: 0
+    indexGateway:
+      replicas: 0
+    bloomCompactor:
+      replicas: 0
+    bloomGateway:
+      replicas: 0
+    # caching
+    chunksCache:
+      enabled: false
+    resultsCache:
+      enabled: false
+    # helm test
+    test:
+      enabled: false
