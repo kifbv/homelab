@@ -15,3 +15,5 @@ spec:
   targetNamespace: monitoring
   timeout: 5m
   wait: true
+  dependsOn:
+    - name: rook-ceph-rbd
