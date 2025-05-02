@@ -24,7 +24,7 @@ spec:
                 - icon: si-github
                   href: https://github.com/kifbv
             - ArchLinux:
-                - icon: si-arch-linux
+                - icon: si-archlinux
                   href: https://archlinux.org
       services:
         - Home:
