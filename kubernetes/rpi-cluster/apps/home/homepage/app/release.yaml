@@ -21,10 +21,10 @@ spec:
       bookmarks:
         - Developer:
             - Github:
-                - icon: github.png
+                - icon: si-github
                   href: https://github.com/kifbv
             - ArchLinux:
-                - icon: arch-linux.png
+                - icon: si-arch-linux
                   href: https://archlinux.org
       services:
         - Home:
@@ -38,20 +38,20 @@ spec:
                 icon: grafana.png
                 href: https://grafana.${INTERNAL_DOMAIN}
                 description: Observability & data visualisation
-            #- Prometheus:
-            #    icon: prometheus.png
-            #    href: https://prometheus.${INTERNAL_DOMAIN}
-            #    description: Monitoring system & time series database
+            - Prometheus:
+                icon: prometheus.png
+                href: https://prometheus.${INTERNAL_DOMAIN}
+                description: Monitoring system & time series database
 
       widgets:
         # show the kubernetes widget, with the cluster summary and individual nodes
         - kubernetes:
             cluster:
-              show: true
+              show: false
               cpu: true
               memory: true
               showLabel: true
-              label: "cluster"
+              label: "rpi-cluster"
             nodes:
               show: true
               cpu: true
