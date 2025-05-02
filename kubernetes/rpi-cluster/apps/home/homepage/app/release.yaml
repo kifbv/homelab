@@ -15,12 +15,17 @@ spec:
         namespace: flux-system
   interval: 30m
   values:
+    image:
+      tag: v1.2
     config:
       bookmarks:
         - Developer:
             - Github:
-                - abbr: GH
+                - icon: github.png
                   href: https://github.com/kifbv
+            - ArchLinux:
+                - icon: arch-linux.png
+                  href: https://archlinux.org
       services:
         - Home:
             - Linkding:
