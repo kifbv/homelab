@@ -13,6 +13,6 @@ spec:
   path: ./kubernetes/rpi-cluster/apps/datastore/stackgres/operator
   prune: false
   sourceRef:
-    name: stackgres
+    name: GitRepository
     namespace: flux-system
   targetNamespace: datastore
