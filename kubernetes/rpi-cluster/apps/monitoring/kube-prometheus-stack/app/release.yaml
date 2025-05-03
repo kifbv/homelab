@@ -62,66 +62,15 @@ spec:
           type: loki
           url: http://loki-gateway.monitoring.svc.cluster.local
           access: proxy
-    #  enabled: false
-    #  forceDeployDashboards: true
-    #  sidecar:
-    #    dashboards:
-    #      annotations:
-    #        grafana.io/folder: Kubernetes
 
-    ###
-    ### Prometheus operator values
-    ###
-    prometheusOperator:
-      resources:
-        requests:
-          cpu: 35m
-          memory: 273M
-        limits:
-          memory: 326M
-
-      prometheusConfigReloader:
-        # resource config for prometheusConfigReloader
-        resources:
-          requests:
-            cpu: 5m
-            memory: 32M
-          limits:
-            memory: 32M
-
-    ###
-    ### Prometheus instance values
-    ###
     prometheus:
       ingress:
         enabled: false
 
       prometheusSpec:
-        #alertingEndpoints:
-        #  - namespace: monitoring
-        #    name: alertmanager
-        #    port: 9093
-        #    apiVersion: v2
-        enableAdminAPI: true
-        enableFeatures:
-          - auto-gomaxprocs
-          - memory-snapshot-on-shutdown
-          - new-service-discovery-manager
-        podMonitorSelectorNilUsesHelmValues: false
-        probeSelectorNilUsesHelmValues: false
         replicas: 1
-        replicaExternalLabelName: "__replica__" # must match with thanos value `.query.replicaLabel[0]`
-        resources:
-          requests:
-            cpu: 100m
-          limits:
-            memory: 2000M
         retention: 14d
         retentionSize: 5GB
-        ruleSelectorNilUsesHelmValues: false
-        scrapeConfigSelectorNilUsesHelmValues: false
-        scrapeInterval: 1m # Must match interval in Grafana Helm chart
-        serviceMonitorSelectorNilUsesHelmValues: false
         storageSpec:
           volumeClaimTemplate:
             spec:
