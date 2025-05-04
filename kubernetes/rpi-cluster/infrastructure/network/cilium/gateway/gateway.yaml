@@ -26,7 +26,6 @@ spec:
     - name: internal-pg
       port: 5432
       protocol: TCP
-      hostname: "*.${INTERNAL_DOMAIN}"
       allowedRoutes:
         kinds:
           - kind: TCPRoute
