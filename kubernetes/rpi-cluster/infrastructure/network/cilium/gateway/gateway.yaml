@@ -23,6 +23,18 @@ spec:
         certificateRefs:
         - kind: Secret
           name: "wildcard-internal-tls"
+    - name: internal-pg
+      port: 5432
+      protocol: TCP
+      hostname: "*.${INTERNAL_DOMAIN}"
+      allowedRoutes:
+        kinds:
+          - kind: TCPRoute
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              networking.kubernetes.io/shared-gateway-access: "true"
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
