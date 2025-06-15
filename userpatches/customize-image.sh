@@ -31,8 +31,8 @@ log "Starting image customization"
 
 # ===== KUBERNETES CONFIG =====
 #
-KUBERNETES_VERSION=v1.32
-CRIO_VERSION=v1.32
+KUBERNETES_VERSION=v1.33
+CRIO_VERSION=v1.33
 
 log "KUBERNETES CONFIG: Setting up Kubernetes $KUBERNETES_VERSION and CRI-O $CRIO_VERSION"
 log "Installing prerequisites"
