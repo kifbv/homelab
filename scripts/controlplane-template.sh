@@ -23,9 +23,13 @@ log "Retrieving configuration values"
 export TOKEN="$(cat /root/kubeadm-init-token)"
 export CERT_KEY="$(cat /root/kubeadm-cert-key)"
 export HOST_IP="$(ip -4 -o addr show end0 | tr -s ' ' | cut -f4 -d' ' | cut -f1 -d/)"
+export POD_SUBNET="$(cat /root/pod-subnet)"
+export SERVICE_SUBNET="$(cat /root/service-subnet)"
 log "TOKEN: $TOKEN"
 log "CERT_KEY: $CERT_KEY"
 log "HOST_IP: $HOST_IP"
+log "POD_SUBNET: $POD_SUBNET"
+log "SERVICE_SUBNET: $SERVICE_SUBNET"
 
 # Initialize the first control plane
 log "This is the first control plane"

@@ -3,6 +3,10 @@ k8sServicePort: 6443
 
 kubeProxyReplacement: true
 
+ipam:
+  operator:
+    clusterPoolIPv4PodCIDR: $POD_SUBNET
+
 hubble:
   relay:
     enabled: true

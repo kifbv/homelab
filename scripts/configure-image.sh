@@ -11,7 +11,7 @@ fi
 
 # Show usage information
 function show_usage() {
-    echo "Usage: $0 --image <image_file> --hostname <hostname> --ssh-key <ssh_key_file> --password <password>"
+    echo "Usage: $0 --image <image_file> --hostname <hostname> --ssh-key <ssh_key_file> --password <password> [--pod-subnet <cidr>] [--service-subnet <cidr>]"
     echo "Example: $0 --image Armbian_22.11.0_Rpi4_jammy_current_5.15.80.img --hostname node0 --ssh-key ~/.ssh/id_ed25519.pub --password pass1234"
     echo
     echo "Options:"
@@ -19,6 +19,8 @@ function show_usage() {
     echo "  --hostname, -h    Hostname to set on the image (must be 'controlplane', 'controlplane[0-9]', or 'node[0-9]')"
     echo "  --ssh-key, -k     Path to the SSH public key file to add to authorized_keys"
     echo "  --password, -p    Password for the k8s pi user (in clear text)"
+    echo "  --pod-subnet      CIDR for Kubernetes pod network (default: 10.244.64.0/18)"
+    echo "  --service-subnet  CIDR for Kubernetes service network (default: 10.244.0.0/20)"
     echo "  --help            Show this help message"
 }
 
@@ -27,6 +29,8 @@ IMAGE_FILE=""
 NEW_HOSTNAME=""
 SSH_KEY_FILE=""
 PASSWD=""
+POD_SUBNET="10.244.64.0/18"
+SERVICE_SUBNET="10.244.0.0/20"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -45,6 +49,14 @@ while [[ $# -gt 0 ]]; do
             ;;
         --password|-p)
             PASSWD="$2"
+            shift 2
+            ;;
+        --pod-subnet)
+            POD_SUBNET="$2"
+            shift 2
+            ;;
+        --service-subnet)
+            SERVICE_SUBNET="$2"
             shift 2
             ;;
         --help)
@@ -223,6 +235,10 @@ if [[ "$NEW_HOSTNAME" == "controlplane" ]]; then
     cp "$(dirname "$0")/kubeadm-init.yaml.tpl" "$MOUNT_DIR/root/kubeadm-init.yaml.tpl"
     # Copy cilium configuration template
     cp "$(dirname "$0")/cilium-values.yaml.tpl" "$MOUNT_DIR/root/cilium-values.yaml.tpl"
+    
+    # Store network subnet configuration
+    echo "$POD_SUBNET" > "$MOUNT_DIR/root/pod-subnet"
+    echo "$SERVICE_SUBNET" > "$MOUNT_DIR/root/service-subnet"
 elif [[ "$NEW_HOSTNAME" =~ ^controlplane[0-9]$ ]]; then
     # Additional control plane nodes
     cp "$(dirname "$0")/controlplane-secondary-template.sh" "$MOUNT_DIR/usr/bin/k8s-firstboot.sh"

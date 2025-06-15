@@ -46,8 +46,8 @@ imageRepository: registry.k8s.io
 kind: ClusterConfiguration
 networking:
   dnsDomain: cluster.local
-  podSubnet: 10.244.64.0/18
-  serviceSubnet: 10.244.0.0/20
+  podSubnet: $POD_SUBNET
+  serviceSubnet: $SERVICE_SUBNET
 proxy: {}
 scheduler: {}
 ---
