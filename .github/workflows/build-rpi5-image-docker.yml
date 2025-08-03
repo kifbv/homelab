@@ -1,0 +1,215 @@
+name: Build Raspberry Pi 5 Debian Image (Docker)
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_name:
+        description: 'Name for the output image'
+        required: false
+        default: 'rpi5-k8s-debian-docker'
+      kubernetes_version:
+        description: 'Kubernetes version to install'
+        required: false
+        default: 'v1.33'
+      pod_subnet:
+        description: 'CIDR for Kubernetes pod network'
+        required: false
+        default: '10.244.64.0/18'
+      service_subnet:
+        description: 'CIDR for Kubernetes service network'
+        required: false
+        default: '10.244.0.0/20'
+
+env:
+  IMAGE_SIZE: "4G"
+  DEBIAN_RELEASE: "bookworm"
+  DEBIAN_MIRROR: "http://deb.debian.org/debian"
+  RPI_FIRMWARE_REPO: "https://github.com/raspberrypi/firmware.git"
+
+jobs:
+  build-image:
+    runs-on: ubuntu-24.04
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Free up disk space
+      run: |
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /opt/ghc
+        sudo rm -rf /opt/hostedtoolcache/CodeQL
+        sudo docker image prune --all --force
+        df -h
+        
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Build Docker image for Pi 5 build environment
+      run: |
+        cat > Dockerfile.builder << 'EOF'
+        FROM debian:bookworm
+        
+        # Install build dependencies
+        RUN apt-get update && apt-get install -y \
+            coreutils quilt parted qemu-user-static debootstrap zerofree zip \
+            dosfstools libarchive-tools libcap2-bin grep rsync xz-utils file \
+            git curl bc gpg pigz xxd arch-test bmap-tools fdisk kpartx \
+            binfmt-support systemd-container qemu-system-arm qemu-utils \
+            gcc-aarch64-linux-gnu libc6-dev-arm64-cross sudo \
+            && rm -rf /var/lib/apt/lists/*
+        
+        # Enable QEMU binfmt
+        RUN echo ':qemu-aarch64:M::\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\xb7\x00:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:/usr/bin/qemu-aarch64-static:CF' > /etc/binfmt.d/qemu-aarch64.conf
+        
+        # Create build directory
+        RUN mkdir -p /build/{image,mnt,firmware}
+        
+        WORKDIR /workspace
+        EOF
+        
+        docker build -f Dockerfile.builder -t rpi5-builder .
+        
+    - name: Create build workspace
+      run: |
+        mkdir -p ${{ github.workspace }}/build-output
+        
+    - name: Download Raspberry Pi firmware
+      run: |
+        git clone --depth 1 ${{ env.RPI_FIRMWARE_REPO }} ${{ github.workspace }}/rpi-firmware
+        
+    - name: Build Raspberry Pi 5 image in Docker
+      env:
+        IMAGE_NAME: ${{ github.event.inputs.image_name || 'rpi5-k8s-debian-docker' }}
+        KUBERNETES_VERSION: ${{ github.event.inputs.kubernetes_version || 'v1.33' }}
+        POD_SUBNET: ${{ github.event.inputs.pod_subnet || '10.244.64.0/18' }}
+        SERVICE_SUBNET: ${{ github.event.inputs.service_subnet || '10.244.0.0/20' }}
+      run: |
+        docker run --rm --privileged \
+          -v ${{ github.workspace }}:/workspace \
+          -v ${{ github.workspace }}/build-output:/build/image \
+          -v ${{ github.workspace }}/rpi-firmware:/build/firmware \
+          -e IMAGE_NAME="$IMAGE_NAME" \
+          -e IMAGE_SIZE="$IMAGE_SIZE" \
+          -e DEBIAN_RELEASE="$DEBIAN_RELEASE" \
+          -e DEBIAN_MIRROR="$DEBIAN_MIRROR" \
+          -e KUBERNETES_VERSION="$KUBERNETES_VERSION" \
+          -e POD_SUBNET="$POD_SUBNET" \
+          -e SERVICE_SUBNET="$SERVICE_SUBNET" \
+          rpi5-builder \
+          bash -c "
+            # Enable QEMU binfmt inside container
+            if [ -f /proc/sys/fs/binfmt_misc/register ]; then
+              echo ':qemu-aarch64:M::\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\xb7\x00:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:/usr/bin/qemu-aarch64-static:CF' > /proc/sys/fs/binfmt_misc/register || true
+            fi
+            
+            # Run the build script
+            cd /workspace
+            ./scripts/build-rpi5-image-cross.sh
+          "
+        
+    - name: Test image integrity
+      run: |
+        cd ${{ github.workspace }}/build-output
+        
+        # Basic integrity checks
+        ls -lh *.img
+        file *.img
+        
+        # Check partition table
+        sudo fdisk -l *.img
+        
+        # Mount and verify basic structure
+        LOOP_DEVICE=\$(sudo losetup --find --show --partscan *.img)
+        sudo mkdir -p /tmp/test_{boot,root}
+        sudo mount "\${LOOP_DEVICE}p1" /tmp/test_boot
+        sudo mount "\${LOOP_DEVICE}p2" /tmp/test_root
+        
+        # Verify key files exist
+        echo "=== Boot partition contents ==="
+        ls -la /tmp/test_boot/
+        test -f /tmp/test_boot/bcm2712-rpi-5-b.dtb && echo "✓ Pi 5 device tree found"
+        test -f /tmp/test_boot/kernel_2712.img && echo "✓ Pi 5 kernel found"
+        test -f /tmp/test_boot/config.txt && echo "✓ Boot config found"
+        
+        echo "=== Root partition key files ==="
+        test -f /tmp/test_root/usr/bin/kubelet && echo "✓ kubelet found"
+        test -f /tmp/test_root/usr/bin/kubeadm && echo "✓ kubeadm found"
+        test -f /tmp/test_root/usr/bin/crio && echo "✓ crio found"
+        test -d /tmp/test_root/home/pi && echo "✓ pi user home found"
+        test -f /tmp/test_root/root/bootstrap-controlplane.sh && echo "✓ bootstrap script found"
+        
+        echo "=== Architecture verification ==="
+        file /tmp/test_root/usr/bin/kubelet
+        file /tmp/test_root/usr/bin/kubeadm
+        
+        # Cleanup
+        sudo umount /tmp/test_boot /tmp/test_root
+        sudo losetup -d "\$LOOP_DEVICE"
+        sudo rmdir /tmp/test_{boot,root}
+        
+    - name: Compress image
+      run: |
+        cd ${{ github.workspace }}/build-output
+        xz -9 -T 0 *.img
+        
+    - name: Calculate checksums
+      run: |
+        cd ${{ github.workspace }}/build-output
+        sha256sum *.img.xz > SHA256SUMS
+        cat SHA256SUMS
+        
+    - name: Upload image artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: rpi5-debian-image-docker-${{ github.run_number }}
+        path: |
+          ${{ github.workspace }}/build-output/*.img.xz
+          ${{ github.workspace }}/build-output/SHA256SUMS
+        retention-days: 30
+        
+    - name: Upload build logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-logs-docker-${{ github.run_number }}
+        path: |
+          ${{ github.workspace }}/build-output/build.log
+        retention-days: 7
+        
+    - name: Create release (on main branch)
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: v${{ github.run_number }}-docker
+        name: Raspberry Pi 5 Debian Image v${{ github.run_number }} (Docker Build)
+        body: |
+          Docker-based build of Raspberry Pi 5 Debian ${{ env.DEBIAN_RELEASE }} image with Kubernetes ${{ github.event.inputs.kubernetes_version || 'v1.33' }}.
+          
+          **Build Method:** Docker container with QEMU cross-compilation
+          
+          **Image Details:**
+          - Base: Debian ${{ env.DEBIAN_RELEASE }} ARM64
+          - Kubernetes: ${{ github.event.inputs.kubernetes_version || 'v1.33' }}
+          - Container Runtime: CRI-O
+          - Pod Subnet: ${{ github.event.inputs.pod_subnet || '10.244.64.0/18' }}
+          - Service Subnet: ${{ github.event.inputs.service_subnet || '10.244.0.0/20' }}
+          - Build Environment: Docker with isolated dependencies
+          
+          **Advantages of Docker Build:**
+          - Complete build environment isolation
+          - Reproducible builds across different hosts
+          - No host system contamination
+          - Easier debugging and troubleshooting
+          
+          **Usage:**
+          1. Download and decompress: `xz -d *.img.xz`
+          2. Configure: `sudo ./scripts/configure-rpi5-image.sh --image *.img --hostname controlplane --ssh-key ~/.ssh/id_ed25519.pub --password yourpassword`
+          3. Flash: `sudo dd if=*.img of=/dev/YOUR_DEVICE bs=4M status=progress`
+          4. Boot your Raspberry Pi 5
+        files: |
+          ${{ github.workspace }}/build-output/*.img.xz
+          ${{ github.workspace }}/build-output/SHA256SUMS
+        draft: false
+        prerelease: false
