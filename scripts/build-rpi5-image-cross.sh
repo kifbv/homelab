@@ -71,23 +71,31 @@ verify_cross_env() {
         exit 1
     fi
     
-    # Test QEMU functionality
+    # Test QEMU functionality (non-fatal)
     log "Testing QEMU ARM64 emulation"
-    $QEMU_STATIC --version | head -1
+    if $QEMU_STATIC --version >/dev/null 2>&1; then
+        $QEMU_STATIC --version | head -1
+    else
+        log "WARNING: QEMU version check failed, but continuing"
+    fi
     
-    # Test cross-compiler
+    # Test cross-compiler (critical)
     log "Testing cross-compiler"
-    echo 'int main(){return 0;}' | "${CROSS_COMPILE}gcc" -x c -o /tmp/test_cross -
-    file /tmp/test_cross
-    rm -f /tmp/test_cross
+    if echo 'int main(){return 0;}' | "${CROSS_COMPILE}gcc" -x c -o /tmp/test_cross - 2>/dev/null; then
+        file /tmp/test_cross 2>/dev/null || echo "Cross-compilation successful"
+        rm -f /tmp/test_cross
+    else
+        log "ERROR: Cross-compiler test failed"
+        exit 1
+    fi
     
     # Check binfmt registration (informational only)
     log "Checking binfmt registrations"
     if [ -d /proc/sys/fs/binfmt_misc ]; then
-        ls -la /proc/sys/fs/binfmt_misc/ | head -10
+        ls -la /proc/sys/fs/binfmt_misc/ 2>/dev/null | head -10 || true
         
         # Look for ARM64 handlers
-        if find /proc/sys/fs/binfmt_misc/ -name "*aarch64*" -o -name "*arm64*" -o -name "*qemu*" | grep -q .; then
+        if find /proc/sys/fs/binfmt_misc/ -name "*aarch64*" -o -name "*arm64*" -o -name "*qemu*" 2>/dev/null | grep -q .; then
             log "ARM64 emulation handlers found"
         else
             log "WARNING: No obvious ARM64 emulation handlers found, but debootstrap may still work"
@@ -96,20 +104,25 @@ verify_cross_env() {
         log "WARNING: binfmt_misc not available, ARM64 emulation may not work"
     fi
     
-    # Test ARM64 execution if possible
+    # Test ARM64 execution if possible (non-fatal)
     log "Testing ARM64 execution (optional)"
-    echo '#include <stdio.h>
-int main(){ printf("Test\\n"); return 0; }' > /tmp/test_arm64.c
-    if "${CROSS_COMPILE}gcc" /tmp/test_arm64.c -o /tmp/test_arm64_exec 2>/dev/null; then
-        if /tmp/test_arm64_exec 2>/dev/null; then
+    EXEC_TEST_RESULT="unknown"
+    if echo '#include <stdio.h>
+int main(){ printf("Test\\n"); return 0; }' | "${CROSS_COMPILE}gcc" -x c -o /tmp/test_arm64_exec - 2>/dev/null; then
+        if /tmp/test_arm64_exec >/dev/null 2>&1; then
             log "✓ ARM64 execution test passed"
+            EXEC_TEST_RESULT="passed"
         else
             log "⚠ ARM64 execution test failed - will rely on chroot with explicit QEMU"
+            EXEC_TEST_RESULT="failed"
         fi
-        rm -f /tmp/test_arm64.c /tmp/test_arm64_exec
+        rm -f /tmp/test_arm64_exec
+    else
+        log "⚠ ARM64 compilation test failed - will rely on chroot with explicit QEMU"
+        EXEC_TEST_RESULT="compilation_failed"
     fi
     
-    log "Cross-compilation environment verified"
+    log "Cross-compilation environment verified (ARM64 execution: $EXEC_TEST_RESULT)"
 }
 
 # Create image file

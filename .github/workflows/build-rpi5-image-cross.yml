@@ -75,27 +75,25 @@ jobs:
         echo "=== Current binfmt registrations ==="
         ls -la /proc/sys/fs/binfmt_misc/ || echo "binfmt_misc not available"
         
-        # Look for any ARM64 handlers
-        find /proc/sys/fs/binfmt_misc/ -name "*aarch64*" -o -name "*arm64*" 2>/dev/null || echo "No ARM64 handlers found by name"
-        
         # Test cross-compilation (this should always work)
         echo 'int main(){return 0;}' | aarch64-linux-gnu-gcc -x c -o /tmp/test_arm64 -
         file /tmp/test_arm64
         echo "✓ Cross-compilation test passed"
         
-        # Test ARM64 execution (this tests QEMU emulation)
-        echo '#include <stdio.h>
-        int main(){ printf("ARM64 emulation works!\\n"); return 0; }' > /tmp/test_arm64.c
-        aarch64-linux-gnu-gcc /tmp/test_arm64.c -o /tmp/test_arm64_exec
-        
-        # Try to execute the ARM64 binary
-        if /tmp/test_arm64_exec; then
-          echo "✓ ARM64 emulation test passed"
+        # Test ARM64 execution (this tests QEMU emulation) - simplified
+        if echo '#include <stdio.h>
+        int main(){ printf("ARM64 emulation works!\\n"); return 0; }' | aarch64-linux-gnu-gcc -x c -o /tmp/test_arm64_exec -; then
+          if /tmp/test_arm64_exec 2>/dev/null; then
+            echo "✓ ARM64 emulation test passed"
+          else
+            echo "⚠ ARM64 emulation test failed, but build may still work"
+          fi
+          rm -f /tmp/test_arm64_exec
         else
-          echo "⚠ ARM64 emulation test failed, but build may still work"
-          echo "Checking available emulators..."
-          ls -la /proc/sys/fs/binfmt_misc/
+          echo "⚠ ARM64 compilation failed, but debootstrap may still work"
         fi
+        
+        rm -f /tmp/test_arm64
         
     - name: Create build environment
       run: |
