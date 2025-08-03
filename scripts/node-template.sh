@@ -21,11 +21,12 @@ sleep 5
 # Get configuration values
 log "Retrieving configuration values"
 TOKEN="$(cat /root/kubeadm-init-token)"
-CP_IP=$(resolvectl query -4 controlplane | grep controlplane | cut -f2 -d' ')
+# Try different methods to resolve controlplane IP
+CP_IP=$(resolvectl query -4 controlplane 2>/dev/null | grep controlplane | cut -f2 -d' ' || getent hosts controlplane | awk '{print $1}' || dig +short controlplane || nslookup controlplane | grep "Address:" | tail -1 | awk '{print $2}')
 
 # Join as a worker node
 log "This is a worker node"
-kubeadm join ${CP_IP}:6443 --token=$TOKEN --discovery-token-unsafe-skip-ca-verification
+kubeadm join "${CP_IP}:6443" --token="$TOKEN" --discovery-token-unsafe-skip-ca-verification
 
 # Cleanup
 log "Disable service to avoid issue in case of reboot"

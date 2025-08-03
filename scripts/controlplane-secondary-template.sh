@@ -22,11 +22,12 @@ sleep 5
 log "Retrieving configuration values"
 TOKEN="$(cat /root/kubeadm-init-token)"
 CERT_KEY="$(cat /root/kubeadm-cert-key)"
-CP_IP=$(resolvectl query -4 controlplane | grep controlplane | cut -f2 -d' ')
+# Try different methods to resolve controlplane IP
+CP_IP=$(resolvectl query -4 controlplane 2>/dev/null | grep controlplane | cut -f2 -d' ' || getent hosts controlplane | awk '{print $1}' || dig +short controlplane || nslookup controlplane | grep "Address:" | tail -1 | awk '{print $2}')
 
 # Join as an additional control plane
 log "This is an additional control plane node"
-kubeadm join ${CP_IP}:6443 --token=$TOKEN --control-plane --certificate-key=$CERT_KEY --discovery-token-unsafe-skip-ca-verification
+kubeadm join "${CP_IP}:6443" --token="$TOKEN" --control-plane --certificate-key="$CERT_KEY" --discovery-token-unsafe-skip-ca-verification
 
 # Cleanup
 log "Disable service to avoid issue in case of reboot"
