@@ -81,6 +81,34 @@ verify_cross_env() {
     file /tmp/test_cross
     rm -f /tmp/test_cross
     
+    # Check binfmt registration (informational only)
+    log "Checking binfmt registrations"
+    if [ -d /proc/sys/fs/binfmt_misc ]; then
+        ls -la /proc/sys/fs/binfmt_misc/ | head -10
+        
+        # Look for ARM64 handlers
+        if find /proc/sys/fs/binfmt_misc/ -name "*aarch64*" -o -name "*arm64*" -o -name "*qemu*" | grep -q .; then
+            log "ARM64 emulation handlers found"
+        else
+            log "WARNING: No obvious ARM64 emulation handlers found, but debootstrap may still work"
+        fi
+    else
+        log "WARNING: binfmt_misc not available, ARM64 emulation may not work"
+    fi
+    
+    # Test ARM64 execution if possible
+    log "Testing ARM64 execution (optional)"
+    echo '#include <stdio.h>
+int main(){ printf("Test\\n"); return 0; }' > /tmp/test_arm64.c
+    if "${CROSS_COMPILE}gcc" /tmp/test_arm64.c -o /tmp/test_arm64_exec 2>/dev/null; then
+        if /tmp/test_arm64_exec 2>/dev/null; then
+            log "✓ ARM64 execution test passed"
+        else
+            log "⚠ ARM64 execution test failed - will rely on chroot with explicit QEMU"
+        fi
+        rm -f /tmp/test_arm64.c /tmp/test_arm64_exec
+    fi
+    
     log "Cross-compilation environment verified"
 }
 

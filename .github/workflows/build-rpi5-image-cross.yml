@@ -59,21 +59,43 @@ jobs:
           binfmt-support systemd-container qemu-system-arm qemu-utils \
           gcc-aarch64-linux-gnu libc6-dev-arm64-cross
           
+    - name: Set up Docker Buildx (for QEMU support)
+      uses: docker/setup-buildx-action@v3
+      
     - name: Setup QEMU and binfmt for ARM64 emulation
       run: |
-        # Enable QEMU user mode emulation
-        sudo systemctl enable systemd-binfmt
-        sudo systemctl start systemd-binfmt
+        # Use Docker's QEMU setup which is more reliable
+        docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
         
-        # Register ARM64 binfmt
-        echo ':qemu-aarch64:M::\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\xb7\x00:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:/usr/bin/qemu-aarch64-static:CF' | sudo tee /proc/sys/fs/binfmt_misc/register
-        
-        # Verify ARM64 emulation works
+        # Verify QEMU static exists and is executable
+        ls -la /usr/bin/qemu-aarch64-static
         /usr/bin/qemu-aarch64-static --version
         
-        # Test cross-compilation
+        # Check what binfmt registrations exist
+        echo "=== Current binfmt registrations ==="
+        ls -la /proc/sys/fs/binfmt_misc/ || echo "binfmt_misc not available"
+        
+        # Look for any ARM64 handlers
+        find /proc/sys/fs/binfmt_misc/ -name "*aarch64*" -o -name "*arm64*" 2>/dev/null || echo "No ARM64 handlers found by name"
+        
+        # Test cross-compilation (this should always work)
         echo 'int main(){return 0;}' | aarch64-linux-gnu-gcc -x c -o /tmp/test_arm64 -
         file /tmp/test_arm64
+        echo "✓ Cross-compilation test passed"
+        
+        # Test ARM64 execution (this tests QEMU emulation)
+        echo '#include <stdio.h>
+        int main(){ printf("ARM64 emulation works!\\n"); return 0; }' > /tmp/test_arm64.c
+        aarch64-linux-gnu-gcc /tmp/test_arm64.c -o /tmp/test_arm64_exec
+        
+        # Try to execute the ARM64 binary
+        if /tmp/test_arm64_exec; then
+          echo "✓ ARM64 emulation test passed"
+        else
+          echo "⚠ ARM64 emulation test failed, but build may still work"
+          echo "Checking available emulators..."
+          ls -la /proc/sys/fs/binfmt_misc/
+        fi
         
     - name: Create build environment
       run: |
