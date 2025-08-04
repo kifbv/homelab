@@ -86,7 +86,7 @@ jobs:
     - name: Compress image
       run: |
         cd /build/image
-        sudo xz -9 -T 0 *.img
+        sudo xz -9 -T 0 --no-warn *.img
         
     - name: Calculate checksums
       run: |
