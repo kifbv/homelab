@@ -93,7 +93,7 @@ jobs:
     - name: Compress image
       run: |
         cd /build/image
-        xz -9 -T 0 *.img
+        xz -9 -T3 -c rpi5-k8s-debian-simple.img > rpi5-k8s-debian-simple.img.xz
         
     - name: Calculate checksums
       run: |
