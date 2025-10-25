@@ -79,6 +79,13 @@ if [[ -z "$IMAGE_FILE" || -z "$NEW_HOSTNAME" || -z "$SSH_KEY_FILE" || -z "$PASSW
     exit 1
 fi
 
+# Validate sops secret exists
+SOPS_SECRET="$(getent passwd "$SUDO_USER" | cut -d: -f6)/.config/sops/age/keys.txt"
+if [[ ! -f $SOPS_SECRET ]]; then
+    echo "Error: sops secret not found, you need to generate one before running this script" >&2
+    exit 1
+fi
+
 # Check if image file exists
 if [[ ! -f "$IMAGE_FILE" ]]; then
     echo "Error: Image file '$IMAGE_FILE' not found" >&2
@@ -91,6 +98,14 @@ if [[ ! -f "$SSH_KEY_FILE" ]]; then
     exit 1
 fi
 
+# Use the 'file' utility to validate it looks like a public key
+KEY_TYPE=$(file -b "$SSH_KEY_FILE")
+if ! echo "$KEY_TYPE" | grep -q "OpenSSH.*public key"; then
+    echo "Warning: File does not appear to be an OpenSSH public key: $SSH_KEY_FILE" >&2
+    echo "File type detected: $KEY_TYPE" >&2
+    echo "Proceeding anyway, but this might not work as expected." >&2
+fi
+
 # Validate hostname pattern
 if [[ ! "$NEW_HOSTNAME" =~ ^(controlplane[0-9]*|node[0-9]+)$ ]]; then
     echo "Error: Hostname must be 'controlplane', 'controlplane[0-9]', or 'node[0-9]'" >&2
@@ -101,13 +116,10 @@ fi
 # Determine node type
 if [[ "$NEW_HOSTNAME" == "controlplane" ]]; then
     NODE_TYPE="controlplane"
-    BOOTSTRAP_SCRIPT="bootstrap-controlplane.sh"
 elif [[ "$NEW_HOSTNAME" =~ ^controlplane[0-9]+$ ]]; then
     NODE_TYPE="controlplane-secondary"
-    BOOTSTRAP_SCRIPT="bootstrap-controlplane-secondary.sh"
 else
     NODE_TYPE="node"
-    BOOTSTRAP_SCRIPT="bootstrap-node.sh"
 fi
 
 echo "Configuring image for $NODE_TYPE: $NEW_HOSTNAME"
@@ -147,16 +159,31 @@ echo "$NEW_HOSTNAME" > "${TEMP_DIR}/rootfs/etc/hostname"
 # Update hosts file
 sed -i "s/rpi5-debian/$NEW_HOSTNAME/g" "${TEMP_DIR}/rootfs/etc/hosts"
 
-# Configure SSH key
-echo "Configuring SSH key for pi user"
+# Configure SSH key and .kube directory
+echo "Configuring SSH key and .kube directory for pi user"
 PI_HOME="${TEMP_DIR}/rootfs/home/pi"
 mkdir -p "$PI_HOME/.ssh"
+mkdir -p "$PI_HOME/.kube"
+chmod 700 "$PI_HOME/.ssh"
+chmod 700 "$PI_HOME/.kube"
 cp "$SSH_KEY_FILE" "$PI_HOME/.ssh/authorized_keys"
 chmod 700 "$PI_HOME/.ssh"
 chmod 600 "$PI_HOME/.ssh/authorized_keys"
 
 # Set ownership (pi user has uid/gid 1000 in the image)
-chown -R 1000:1000 "$PI_HOME/.ssh"
+# Try to get actual pi user IDs from the image
+PI_UID=$(grep "^pi:" "${TEMP_DIR}/rootfs/etc/passwd" | cut -d: -f3 2>/dev/null || echo "1000")
+PI_GID=$(grep "^pi:" "${TEMP_DIR}/rootfs/etc/passwd" | cut -d: -f4 2>/dev/null || echo "1000")
+
+if [ -n "$PI_UID" ] && [ -n "$PI_GID" ]; then
+    chown -R "${PI_UID}:${PI_GID}" "$PI_HOME/.ssh"
+    chown -R "${PI_UID}:${PI_GID}" "$PI_HOME/.kube" 2>/dev/null || true
+else
+    # Fallback to common values
+    chown -R 1000:1000 "$PI_HOME/.ssh"
+    chown -R 1000:1000 "$PI_HOME/.kube" 2>/dev/null || true
+    echo "Warning: Could not determine pi user IDs, using default 1000:1000"
+fi
 
 # Set password for pi user
 echo "Setting password for pi user"
@@ -167,7 +194,57 @@ sed -i "s|^pi:[^:]*:|pi:$PI_PASSWORD_HASH:|" "${TEMP_DIR}/rootfs/etc/shadow"
 echo "Configuring Kubernetes settings"
 sed -i "s|\$POD_SUBNET|$POD_SUBNET|g" "${TEMP_DIR}/rootfs/root/kubeadm-init.yaml.tpl"
 sed -i "s|\$SERVICE_SUBNET|$SERVICE_SUBNET|g" "${TEMP_DIR}/rootfs/root/kubeadm-init.yaml.tpl"
+# Copy cilium configuration template
+cp "$(dirname "$0")/cilium-values.yaml.tpl" "${TEMP_DIR}/rootfs/root/cilium-values.yaml.tpl"
 sed -i "s|\$POD_SUBNET|$POD_SUBNET|g" "${TEMP_DIR}/rootfs/root/cilium-values.yaml.tpl"
+
+# Store network subnet configuration
+echo "$POD_SUBNET" > "${TEMP_DIR}/rootfs/root/pod-subnet"
+echo "$SERVICE_SUBNET" > "${TEMP_DIR}/rootfs/root/service-subnet"
+
+# Create FluxInstance resource
+echo "Creating FluxInstance resource"
+cat <<-EOF > "${TEMP_DIR}/rootfs/root/flux-instance.yaml"
+apiVersion: fluxcd.controlplane.io/v1
+kind: FluxInstance
+metadata:
+  name: flux
+  namespace: flux-system
+spec:
+  distribution:
+    version: "2.x"
+    registry: "ghcr.io/fluxcd"
+    artifact: "oci://ghcr.io/controlplaneio-fluxcd/flux-operator-manifests"
+  sync:
+    kind: GitRepository
+    url: "$(cd "$(dirname "$0")/.." && git remote get-url origin 2>/dev/null || echo 'https://github.com/your-org/your-repo')"
+    ref: "refs/heads/main"
+    path: "kubernetes/rpi-cluster/flux/config"
+  kustomize:
+    patches:
+      - patch: |
+          - op: add
+            path: /spec/decryption
+            value:
+              provider: sops
+              secretRef:
+                name: flux-sops
+        target:
+          kind: Kustomization
+      - patch: |
+          - op: add
+            path: /spec/template/spec/containers/0/args/-
+            value: --concurrent=4
+          - op: replace
+            path: /spec/template/spec/volumes/0
+            value:
+              name: temp
+              emptyDir:
+                medium: Memory
+        target:
+          kind: Deployment
+          name: kustomize-controller
+EOF
 
 # Configure firstboot service for the specific node type
 echo "Configuring firstboot service for $NODE_TYPE"
@@ -181,7 +258,7 @@ ConditionPathExists=!/var/lib/k8s-firstboot-done
 
 [Service]
 Type=oneshot
-ExecStart=/root/$BOOTSTRAP_SCRIPT
+ExecStart=/usr/bin/k8s-firstboot.sh
 ExecStartPost=/usr/bin/touch /var/lib/k8s-firstboot-done
 StandardOutput=journal
 StandardError=journal
@@ -191,22 +268,50 @@ RemainAfterExit=yes
 WantedBy=multi-user.target
 EOF
 
+# Copy the appropriate template based on hostname and enable the service
+echo "Creating appropriate bootstrap script for $NEW_HOSTNAME..."
+if [[ "$NEW_HOSTNAME" == "controlplane" ]]; then
+    # First control plane node
+    cp "$(dirname "$0")/controlplane-template.sh" "${TEMP_DIR}/rootfs/usr/bin/k8s-firstboot.sh"
+    # kubeadm-init.yaml.tpl is already copied above
+elif [[ "$NEW_HOSTNAME" =~ ^controlplane[0-9]+$ ]]; then
+    # Additional control plane nodes
+    if [[ -f "$(dirname "$0")/controlplane-secondary-template.sh" ]]; then
+        cp "$(dirname "$0")/controlplane-secondary-template.sh" "${TEMP_DIR}/rootfs/usr/bin/k8s-firstboot.sh"
+    else
+        echo "Warning: controlplane-secondary-template.sh not found, using controlplane template"
+        cp "$(dirname "$0")/controlplane-template.sh" "${TEMP_DIR}/rootfs/usr/bin/k8s-firstboot.sh"
+    fi
+elif [[ "$NEW_HOSTNAME" =~ ^node[0-9]+$ ]]; then
+    # Worker nodes
+    if [[ -f "$(dirname "$0")/node-template.sh" ]]; then
+        cp "$(dirname "$0")/node-template.sh" "${TEMP_DIR}/rootfs/usr/bin/k8s-firstboot.sh"
+    else
+        echo "Warning: node-template.sh not found, creating minimal bootstrap script"
+        cat << 'NODESCRIPT' > "${TEMP_DIR}/rootfs/usr/bin/k8s-firstboot.sh"
+#!/bin/bash
+echo "Minimal node bootstrap - manual Kubernetes join required"
+echo "To join cluster, get join command from controlplane and run it"
+NODESCRIPT
+    fi
+else
+    echo "Error: Unrecognized hostname pattern: $NEW_HOSTNAME" >&2
+    exit 1
+fi
+
+# Make bootstrap script executable
+chmod 755 "${TEMP_DIR}/rootfs/usr/bin/k8s-firstboot.sh"
+
+# Set root-only permissions on /root/ files
+chmod 600 "${TEMP_DIR}/rootfs/root"/* 2>/dev/null || true
+
 # Enable the firstboot service
 ln -sf "../k8s-firstboot.service" "${TEMP_DIR}/rootfs/etc/systemd/system/multi-user.target.wants/k8s-firstboot.service"
 
-# Create SOPS age key directory and copy key if it exists
-SOPS_DIR="${TEMP_DIR}/rootfs/home/pi/.config/sops/age"
-if [[ -f "$HOME/.config/sops/age/keys.txt" ]]; then
-    echo "Copying SOPS age key"
-    mkdir -p "$SOPS_DIR"
-    cp "$HOME/.config/sops/age/keys.txt" "$SOPS_DIR/"
-    chown -R 1000:1000 "${TEMP_DIR}/rootfs/home/pi/.config"
-    chmod 700 "$SOPS_DIR"
-    chmod 600 "$SOPS_DIR/keys.txt"
-else
-    echo "Warning: SOPS age key not found at $HOME/.config/sops/age/keys.txt"
-    echo "You may need to manually copy the key later for Flux to work properly"
-fi
+# Copy sops secret to root home dir (required)
+echo "Copying SOPS age key"
+cp "$SOPS_SECRET" "${TEMP_DIR}/rootfs/root/keys.txt"
+chmod 600 "${TEMP_DIR}/rootfs/root/keys.txt"
 
 # Update boot configuration with hostname
 echo "Updating boot configuration"
@@ -215,9 +320,16 @@ if grep -q "console=" "${TEMP_DIR}/boot/cmdline.txt"; then
     sed -i "s/rootwait/rootwait systemd.hostname=$NEW_HOSTNAME/" "${TEMP_DIR}/boot/cmdline.txt"
 fi
 
+# Verify actions
+SSH_KEY_VERIFIED="$(cat "${TEMP_DIR}/rootfs/home/pi/.ssh/authorized_keys")"
+HOSTNAME_VERIFIED="$(cat "${TEMP_DIR}/rootfs/etc/hostname")"
+
 echo "Configuration completed successfully!"
 echo ""
 echo "Image is now configured for $NODE_TYPE: $NEW_HOSTNAME"
+echo "Hostname: $HOSTNAME_VERIFIED"
+echo "SSH Key: ${SSH_KEY_VERIFIED:0:50}..."
+echo ""
 echo "You can now burn this image to your storage device and boot your Raspberry Pi 5"
 echo ""
 echo "Next steps:"
