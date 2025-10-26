@@ -4,7 +4,7 @@ A complete Kubernetes homelab setup running on Raspberry Pi 5 boards with GitOps
 
 ## ✨ Features
 
-- 🐧 [Armbian OS](https://www.armbian.com/) - Optimized Linux for ARM boards
+- 🐧 Custom Debian-based OS (Bookworm) - Lightweight ARM64 Linux optimized for Raspberry Pi 5
 - ☸️ [kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/) - Production-grade Kubernetes installation
 - 🐳 [CRI-O](https://github.com/cri-o/cri-o/tree/main) - Lightweight container runtime
 - 🔄 [Cilium](https://www.cilium.io/) - eBPF-based networking, observability, and security
@@ -50,44 +50,65 @@ EOF
 
 #### 1. 🔨 Build the Raspberry Pi Image
 
-Run the `Build Armbian Image` GitHub workflow to create a custom Armbian image with:
-- Kubernetes components pre-installed (kubeadm, kubelet, kubectl)
-- CRI-O container runtime
+Run the `Build Raspberry Pi 5 Debian Image (Simple Cross-Compilation)` GitHub workflow to create a custom Debian-based image with:
+- Debian Bookworm (ARM64) base system built with debootstrap
+- Kubernetes components pre-installed (kubeadm, kubelet, kubectl v1.33)
+- CRI-O container runtime (v1.33)
+- Helm for package management
+- Official Raspberry Pi 5 firmware and kernel
 - All necessary dependencies for both control plane and worker nodes
 
-The image is customized through the `userpatches/customize-image.sh` script with these optimizations:
-- `CONSOLE_AUTOLOGIN=no` - Improved security by disabling automatic root login
-- `EXTRAWIFI=no` - Smaller image by excluding unnecessary WiFi drivers
+The image is built using cross-compilation with QEMU, creating a minimal 4GB image optimized for Raspberry Pi 5. The build process:
+- Creates partitioned disk image with FAT32 boot and ext4 root partitions
+- Uses debootstrap for creating the Debian ARM64 rootfs
+- Installs Kubernetes and CRI-O from official repositories
+- Pre-generates kubeadm bootstrap tokens and certificate keys
+- Configures kernel parameters for Kubernetes (IP forwarding, cgroups)
+- Sets up secure SSH configuration (no root login, no password authentication)
 
 #### 2. ⚙️ Configure the Image
 
-Before burning the image to your microSD card or storage device, you need to configure it for the specific node role:
+After building the image via GitHub Actions, download it and configure it for the specific node role before burning to storage:
 
 ```bash
+# Download and extract the image from GitHub Actions artifacts
+unxz rpi5-k8s-debian-simple.img.xz
+
 # Show usage information
-sudo ./scripts/configure-image.sh --help
+sudo ./scripts/configure-rpi5-image.sh --help
 
 # Example for the main control plane node
-sudo ./scripts/configure-image.sh --image Armbian.img --hostname controlplane --ssh-key ~/.ssh/id_ed25519.pub --password yourpassword
+sudo ./scripts/configure-rpi5-image.sh --image rpi5-k8s-debian-simple.img --hostname controlplane --ssh-key ~/.ssh/id_ed25519.pub --password yourpassword
 
 # Example for a worker node
-sudo ./scripts/configure-image.sh --image Armbian.img --hostname node0 --ssh-key ~/.ssh/id_ed25519.pub --password yourpassword
+sudo ./scripts/configure-rpi5-image.sh --image rpi5-k8s-debian-simple.img --hostname node0 --ssh-key ~/.ssh/id_ed25519.pub --password yourpassword
 ```
 
-The script supports these hostname patterns:
+The configuration script:
+- Mounts the image and modifies it before first boot
+- Sets the hostname and updates system files
+- Configures SSH keys for the `pi` user
+- Installs the SOPS age key for Flux secret decryption
+- Copies the appropriate bootstrap script based on node type
+- Creates the FluxInstance resource for GitOps
+- Configures network subnets for Kubernetes
+
+Supported hostname patterns:
 - `controlplane` - The main control plane node (only one)
 - `controlplane[0-9]` - Additional control plane nodes (for HA setups)
 - `node[0-9]` - Worker nodes
 
 #### 3. 📱 Boot Your Raspberry Pi
 
-Burn the image to your storage device using the provided command e.g.:
+Burn the configured image to your storage device:
 
 ```bash
-sudo dd bs=4M conv=fsync oflag=direct status=progress if=Armbian.img of=/dev/mmcblk0
-```
+# Find your storage device (e.g., /dev/mmcblk0, /dev/sda)
+lsblk
 
-Find your device path using `lsblk` if needed.
+# Burn the image (replace /dev/mmcblk0 with your device)
+sudo dd bs=4M conv=fsync oflag=direct status=progress if=rpi5-k8s-debian-simple.img of=/dev/mmcblk0
+```
 
 Once the media is ready:
 1. Insert it into your Raspberry Pi
