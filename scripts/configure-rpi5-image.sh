@@ -1,6 +1,7 @@
 #!/bin/bash
-# configure-rpi5-image.sh - Configure Raspberry Pi 5 Debian image before burning
-# This script modifies the image to set hostname, SSH keys, and node-specific configuration
+# configure-rpi5-image.sh - Configure Raspberry Pi 5 image before burning
+# This script modifies a Raspberry Pi OS base image (prepared with prepare-base-image.sh)
+# to set hostname, SSH keys, and node-specific Kubernetes configuration.
 
 set -e
 
@@ -12,17 +13,28 @@ fi
 
 # Show usage information
 function show_usage() {
-    echo "Usage: $0 --image <image_file> --hostname <hostname> --ssh-key <ssh_key_file> --password <password> [--pod-subnet <cidr>] [--service-subnet <cidr>]"
-    echo "Example: $0 --image rpi5-k8s-debian.img --hostname node0 --ssh-key ~/.ssh/id_ed25519.pub --password pass1234"
-    echo
-    echo "Options:"
-    echo "  --image, -i       Path to the Raspberry Pi 5 image file"
-    echo "  --hostname, -h    Hostname to set on the image (must be 'controlplane', 'controlplane[0-9]', or 'node[0-9]')"
-    echo "  --ssh-key, -k     Path to the SSH public key file to add to authorized_keys"
-    echo "  --password, -p    Password for the pi user (in clear text)"
-    echo "  --pod-subnet      CIDR for Kubernetes pod network (default: 10.244.64.0/18)"
-    echo "  --service-subnet  CIDR for Kubernetes service network (default: 10.244.0.0/20)"
-    echo "  --help            Show this help message"
+    cat << EOF
+Usage: $0 --image <image_file> --hostname <hostname> --ssh-key <ssh_key_file> --password <password> [OPTIONS]
+
+Configure a Raspberry Pi OS base image (prepared with prepare-base-image.sh) for a specific node.
+
+Example:
+  $0 --image rpi5-k8s-base.img --hostname controlplane --ssh-key ~/.ssh/id_ed25519.pub --password mypassword
+
+Options:
+  --image, -i       Path to the base Raspberry Pi image file (from prepare-base-image.sh)
+  --hostname, -h    Hostname for this node:
+                      'controlplane'         - First control plane node
+                      'controlplane[0-9]'    - Additional control plane nodes
+                      'node[0-9]'            - Worker nodes
+  --ssh-key, -k     Path to SSH public key file for the pi user
+  --password, -p    Password for the pi user (in plain text)
+  --pod-subnet      CIDR for Kubernetes pod network (default: 10.244.64.0/18)
+  --service-subnet  CIDR for Kubernetes service network (default: 10.244.0.0/20)
+  --help            Show this help message
+
+The image will be modified with node-specific configuration and is ready to burn to SD card/USB.
+EOF
 }
 
 # Initialize variables
@@ -132,6 +144,8 @@ LOOP_DEVICE=""
 cleanup() {
     echo "Cleaning up..."
     if [[ -n "$LOOP_DEVICE" ]]; then
+        # Try both possible boot mount points
+        umount "${TEMP_DIR}/rootfs/boot/firmware" 2>/dev/null || true
         umount "${TEMP_DIR}/boot" 2>/dev/null || true
         umount "${TEMP_DIR}/rootfs" 2>/dev/null || true
         losetup -d "$LOOP_DEVICE" 2>/dev/null || true
@@ -146,18 +160,41 @@ echo "Mounting image: $IMAGE_FILE"
 LOOP_DEVICE=$(losetup --find --show --partscan "$IMAGE_FILE")
 mkdir -p "${TEMP_DIR}/boot" "${TEMP_DIR}/rootfs"
 
-# Mount partitions
-mount "${LOOP_DEVICE}p1" "${TEMP_DIR}/boot"
+# Wait for partitions to be ready
+sleep 2
+partprobe "$LOOP_DEVICE" 2>/dev/null || true
+sleep 1
+
+# Mount root partition (usually p2)
 mount "${LOOP_DEVICE}p2" "${TEMP_DIR}/rootfs"
 
+# Mount boot partition - Raspberry Pi OS uses /boot/firmware
+if [[ -d "${TEMP_DIR}/rootfs/boot/firmware" ]]; then
+    mount "${LOOP_DEVICE}p1" "${TEMP_DIR}/rootfs/boot/firmware"
+    BOOT_DIR="${TEMP_DIR}/rootfs/boot/firmware"
+else
+    # Fallback to /boot if /boot/firmware doesn't exist
+    mkdir -p "${TEMP_DIR}/boot"
+    mount "${LOOP_DEVICE}p1" "${TEMP_DIR}/boot"
+    BOOT_DIR="${TEMP_DIR}/boot"
+fi
+
 echo "Image mounted successfully"
+echo "Root filesystem: ${TEMP_DIR}/rootfs"
+echo "Boot filesystem: $BOOT_DIR"
 
 # Configure hostname
 echo "Setting hostname to: $NEW_HOSTNAME"
 echo "$NEW_HOSTNAME" > "${TEMP_DIR}/rootfs/etc/hostname"
 
-# Update hosts file
+# Update hosts file - handle both custom and Raspberry Pi OS default hostnames
+OLD_HOSTNAME=$(cat "${TEMP_DIR}/rootfs/etc/hostname" || echo "raspberrypi")
 sed -i "s/rpi5-debian/$NEW_HOSTNAME/g" "${TEMP_DIR}/rootfs/etc/hosts"
+sed -i "s/raspberrypi/$NEW_HOSTNAME/g" "${TEMP_DIR}/rootfs/etc/hosts"
+# Ensure there's a localhost entry
+if ! grep -q "127.0.1.1" "${TEMP_DIR}/rootfs/etc/hosts"; then
+    echo "127.0.1.1    $NEW_HOSTNAME" >> "${TEMP_DIR}/rootfs/etc/hosts"
+fi
 
 # Configure SSH key and .kube directory
 echo "Configuring SSH key and .kube directory for pi user"
@@ -315,9 +352,15 @@ chmod 600 "${TEMP_DIR}/rootfs/root/keys.txt"
 
 # Update boot configuration with hostname
 echo "Updating boot configuration"
-if grep -q "console=" "${TEMP_DIR}/boot/cmdline.txt"; then
-    # Add hostname to existing cmdline
-    sed -i "s/rootwait/rootwait systemd.hostname=$NEW_HOSTNAME/" "${TEMP_DIR}/boot/cmdline.txt"
+if [[ -f "$BOOT_DIR/cmdline.txt" ]]; then
+    if grep -q "console=" "$BOOT_DIR/cmdline.txt"; then
+        # Add hostname to existing cmdline if not already present
+        if ! grep -q "systemd.hostname=" "$BOOT_DIR/cmdline.txt"; then
+            sed -i "s/rootwait/rootwait systemd.hostname=$NEW_HOSTNAME/" "$BOOT_DIR/cmdline.txt"
+        fi
+    fi
+else
+    echo "Warning: cmdline.txt not found at $BOOT_DIR/cmdline.txt"
 fi
 
 # Verify actions
