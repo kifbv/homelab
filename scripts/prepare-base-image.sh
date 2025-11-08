@@ -251,7 +251,6 @@ apt-get install -y \
     ca-certificates \
     curl \
     gnupg \
-    software-properties-common \
     gettext-base
 
 echo "[INFO] Adding Kubernetes repository..."
