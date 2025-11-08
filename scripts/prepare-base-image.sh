@@ -8,7 +8,7 @@ set -e
 # Configuration
 DEFAULT_INPUT_URL="https://downloads.raspberrypi.com/raspios_lite_arm64/images/raspios_lite_arm64-2025-10-02/2025-10-01-raspios-trixie-arm64-lite.img.xz"
 KUBERNETES_VERSION="${KUBERNETES_VERSION:-v1.33}"
-CRIO_VERSION="1.33"
+CRIO_VERSION="${CRIO_VERSION:-v1.33}"
 
 # Color output
 RED='\033[0;31m'
@@ -267,10 +267,10 @@ apt-get install -y kubelet kubeadm kubectl
 apt-mark hold kubelet kubeadm kubectl
 
 echo "[INFO] Adding CRI-O repository..."
-curl -fsSL https://pkgs.k8s.io/addons:/cri-o:/stable:/$CRIO_VERSION/deb/Release.key | \
+curl -fsSL https://download.opensuse.org/repositories/isv:/cri-o:/stable:/$CRIO_VERSION/deb/Release.key | \
     gpg --dearmor -o /etc/apt/keyrings/cri-o-apt-keyring.gpg
 
-echo "deb [signed-by=/etc/apt/keyrings/cri-o-apt-keyring.gpg] https://pkgs.k8s.io/addons:/cri-o:/stable:/$CRIO_VERSION/deb/ /" | \
+echo "deb [signed-by=/etc/apt/keyrings/cri-o-apt-keyring.gpg] https://download.opensuse.org/repositories/isv:/cri-o:/stable:/$CRIO_VERSION/deb/ /" | \
     tee /etc/apt/sources.list.d/cri-o.list
 
 echo "[INFO] Installing CRI-O..."

@@ -135,8 +135,8 @@ sudo ./prepare-base-image.sh [OPTIONS]
 - `--help` - Show help message
 
 **What it installs:**
-- Kubernetes: kubelet, kubeadm, kubectl
-- Container runtime: CRI-O v1.33
+- Kubernetes: kubelet, kubeadm, kubectl (from pkgs.k8s.io)
+- Container runtime: CRI-O v1.33 (from OpenSUSE OBS repository)
 - Tools: vim, git, curl, wget, htop, jq, net-tools
 - Kernel modules: overlay, br_netfilter
 - Sysctl configuration for Kubernetes networking
