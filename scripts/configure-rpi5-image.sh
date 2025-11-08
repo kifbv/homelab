@@ -23,6 +23,9 @@ Example:
 
 Options:
   --image, -i       Path to the base Raspberry Pi image file (from prepare-base-image.sh)
+                    This file will NOT be modified - a copy will be created
+  --output, -o      Output image file path (optional)
+                    Default: <hostname>.img (e.g., controlplane.img)
   --hostname, -h    Hostname for this node:
                       'controlplane'         - First control plane node
                       'controlplane[0-9]'    - Additional control plane nodes
@@ -33,12 +36,14 @@ Options:
   --service-subnet  CIDR for Kubernetes service network (default: 10.244.0.0/20)
   --help            Show this help message
 
-The image will be modified with node-specific configuration and is ready to burn to SD card/USB.
+The base image will be copied to the output location and then configured.
+The original base image remains unchanged and can be reused for other nodes.
 EOF
 }
 
 # Initialize variables
 IMAGE_FILE=""
+OUTPUT_FILE=""
 NEW_HOSTNAME=""
 SSH_KEY_FILE=""
 PASSWD=""
@@ -50,6 +55,10 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --image|-i)
             IMAGE_FILE="$2"
+            shift 2
+            ;;
+        --output|-o)
+            OUTPUT_FILE="$2"
             shift 2
             ;;
         --hostname|-h)
@@ -125,6 +134,11 @@ if [[ ! "$NEW_HOSTNAME" =~ ^(controlplane[0-9]*|node[0-9]+)$ ]]; then
     exit 1
 fi
 
+# Set default output file if not specified
+if [[ -z "$OUTPUT_FILE" ]]; then
+    OUTPUT_FILE="${NEW_HOSTNAME}.img"
+fi
+
 # Determine node type
 if [[ "$NEW_HOSTNAME" == "controlplane" ]]; then
     NODE_TYPE="controlplane"
@@ -135,6 +149,24 @@ else
 fi
 
 echo "Configuring image for $NODE_TYPE: $NEW_HOSTNAME"
+echo "Input image: $IMAGE_FILE"
+echo "Output image: $OUTPUT_FILE"
+
+# Check if output file already exists
+if [[ -f "$OUTPUT_FILE" ]]; then
+    echo "Warning: Output file '$OUTPUT_FILE' already exists and will be overwritten"
+    read -p "Continue? (y/N): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "Aborted by user"
+        exit 1
+    fi
+fi
+
+# Copy the base image to output location
+echo "Copying base image to $OUTPUT_FILE..."
+cp "$IMAGE_FILE" "$OUTPUT_FILE"
+echo "Copy complete"
 
 # Create temporary directories
 TEMP_DIR=$(mktemp -d)
@@ -156,8 +188,8 @@ cleanup() {
 trap cleanup EXIT
 
 # Mount the image
-echo "Mounting image: $IMAGE_FILE"
-LOOP_DEVICE=$(losetup --find --show --partscan "$IMAGE_FILE")
+echo "Mounting image: $OUTPUT_FILE"
+LOOP_DEVICE=$(losetup --find --show --partscan "$OUTPUT_FILE")
 mkdir -p "${TEMP_DIR}/boot" "${TEMP_DIR}/rootfs"
 
 # Wait for partitions to be ready
@@ -373,10 +405,11 @@ echo "Image is now configured for $NODE_TYPE: $NEW_HOSTNAME"
 echo "Hostname: $HOSTNAME_VERIFIED"
 echo "SSH Key: ${SSH_KEY_VERIFIED:0:50}..."
 echo ""
+echo "Output image: $OUTPUT_FILE"
 echo "You can now burn this image to your storage device and boot your Raspberry Pi 5"
 echo ""
 echo "Next steps:"
-echo "1. Burn the image: sudo dd if=$IMAGE_FILE of=/dev/YOUR_DEVICE bs=4M status=progress"
+echo "1. Burn the image: sudo dd if=$OUTPUT_FILE of=/dev/YOUR_DEVICE bs=4M status=progress"
 echo "2. Boot your Raspberry Pi 5"
 echo "3. The system will automatically run the bootstrap script on first boot"
 

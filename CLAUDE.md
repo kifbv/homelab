@@ -35,9 +35,10 @@ sudo ./scripts/prepare-base-image.sh --output rpi5-k8s-base.img
 
 **Stage 2: Node-Specific Configuration** (run per node)
 
-After creating the base image, use `scripts/configure-rpi5-image.sh` to customize it per-node:
+After creating the base image, use `scripts/configure-rpi5-image.sh` to customize it per-node. The script creates a copy of the base image, leaving the original untouched:
 
 ```bash
+# Creates controlplane.img from the base image
 sudo ./scripts/configure-rpi5-image.sh \
   --image rpi5-k8s-base.img \
   --hostname controlplane \
@@ -45,7 +46,7 @@ sudo ./scripts/configure-rpi5-image.sh \
   --password yourpassword
 ```
 
-This script mounts the image and:
+This script copies and then mounts the image to:
 - Sets hostname and updates /etc/hosts
 - Installs SSH public key for the pi user
 - Copies SOPS age key to /root/keys.txt

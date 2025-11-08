@@ -75,32 +75,40 @@ This will:
 
 ### Step 2: Configure Per-Node Images
 
-Customize the base image for each node in your cluster:
+Customize the base image for each node in your cluster. The script automatically creates a copy of the base image, leaving the original untouched:
 
 ```bash
-# First control plane node
+# First control plane node (creates controlplane.img)
 sudo ./scripts/configure-rpi5-image.sh \
   --image rpi5-k8s-base.img \
   --hostname controlplane \
   --ssh-key ~/.ssh/id_ed25519.pub \
   --password yourpassword
 
-# Additional control plane nodes
+# Additional control plane nodes (creates controlplane1.img)
 sudo ./scripts/configure-rpi5-image.sh \
   --image rpi5-k8s-base.img \
   --hostname controlplane1 \
   --ssh-key ~/.ssh/id_ed25519.pub \
   --password yourpassword
 
-# Worker nodes
+# Worker nodes (creates node0.img)
 sudo ./scripts/configure-rpi5-image.sh \
   --image rpi5-k8s-base.img \
   --hostname node0 \
   --ssh-key ~/.ssh/id_ed25519.pub \
   --password yourpassword
+
+# Or specify custom output location
+sudo ./scripts/configure-rpi5-image.sh \
+  --image rpi5-k8s-base.img \
+  --output /path/to/custom-node.img \
+  --hostname node1 \
+  --ssh-key ~/.ssh/id_ed25519.pub \
+  --password yourpassword
 ```
 
-**Time:** ~30 seconds per node
+**Time:** ~30 seconds per node (plus image copy time)
 
 ### Step 3: Burn to Storage and Boot
 
@@ -153,12 +161,13 @@ sudo ./configure-rpi5-image.sh [OPTIONS]
 ```
 
 **Required Options:**
-- `--image PATH` - Path to base image (from prepare-base-image.sh)
+- `--image PATH` - Path to base image (from prepare-base-image.sh) - will NOT be modified
 - `--hostname NAME` - Node hostname (determines role)
 - `--ssh-key PATH` - SSH public key for pi user
 - `--password PASS` - Password for pi user
 
 **Optional Options:**
+- `--output PATH` - Output image path (default: `<hostname>.img`)
 - `--pod-subnet CIDR` - Kubernetes pod network (default: `10.244.64.0/18`)
 - `--service-subnet CIDR` - Kubernetes service network (default: `10.244.0.0/20`)
 - `--help` - Show help message
@@ -168,15 +177,18 @@ sudo ./configure-rpi5-image.sh [OPTIONS]
 - `controlplane[0-9]` → Additional control planes (joins with `--control-plane` flag)
 - `node[0-9]` → Worker nodes (joins as worker)
 
-**What it configures:**
-- System hostname and /etc/hosts
-- SSH authorized keys for pi user
-- User password
-- SOPS age key (copied to /root/keys.txt)
-- Network subnet configuration
-- Bootstrap script based on node role
-- FluxInstance resource for GitOps
-- Systemd service for first-boot automation
+**What it does:**
+- Creates a copy of the base image (original stays pristine)
+- Configures system hostname and /etc/hosts
+- Sets up SSH authorized keys for pi user
+- Sets user password
+- Copies SOPS age key to /root/keys.txt
+- Configures network subnet settings
+- Installs bootstrap script based on node role
+- Creates FluxInstance resource for GitOps
+- Enables systemd service for first-boot automation
+
+**Important:** The base image is never modified. A copy is created and configured, allowing the base image to be reused for multiple nodes.
 
 ## Bootstrap Templates
 
