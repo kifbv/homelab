@@ -261,10 +261,34 @@ sed -i "s|^pi:[^:]*:|pi:$PI_PASSWORD_HASH:|" "${TEMP_DIR}/rootfs/etc/shadow"
 
 # Configure Kubernetes settings
 echo "Configuring Kubernetes settings"
+
+# Ensure templates exist in the image (copy from scripts dir if missing)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [[ ! -f "${TEMP_DIR}/rootfs/root/kubeadm-init.yaml.tpl" ]]; then
+    echo "Warning: kubeadm-init.yaml.tpl not found in image, copying from scripts directory"
+    if [[ -f "$SCRIPT_DIR/kubeadm-init.yaml.tpl" ]]; then
+        cp "$SCRIPT_DIR/kubeadm-init.yaml.tpl" "${TEMP_DIR}/rootfs/root/kubeadm-init.yaml.tpl"
+        chmod 600 "${TEMP_DIR}/rootfs/root/kubeadm-init.yaml.tpl"
+    else
+        echo "Error: kubeadm-init.yaml.tpl not found in scripts directory either!" >&2
+        exit 1
+    fi
+fi
+
+if [[ ! -f "${TEMP_DIR}/rootfs/root/cilium-values.yaml.tpl" ]]; then
+    echo "Warning: cilium-values.yaml.tpl not found in image, copying from scripts directory"
+    if [[ -f "$SCRIPT_DIR/cilium-values.yaml.tpl" ]]; then
+        cp "$SCRIPT_DIR/cilium-values.yaml.tpl" "${TEMP_DIR}/rootfs/root/cilium-values.yaml.tpl"
+        chmod 600 "${TEMP_DIR}/rootfs/root/cilium-values.yaml.tpl"
+    else
+        echo "Error: cilium-values.yaml.tpl not found in scripts directory either!" >&2
+        exit 1
+    fi
+fi
+
+# Substitute network subnet values in templates
 sed -i "s|\$POD_SUBNET|$POD_SUBNET|g" "${TEMP_DIR}/rootfs/root/kubeadm-init.yaml.tpl"
 sed -i "s|\$SERVICE_SUBNET|$SERVICE_SUBNET|g" "${TEMP_DIR}/rootfs/root/kubeadm-init.yaml.tpl"
-# Copy cilium configuration template
-cp "$(dirname "$0")/cilium-values.yaml.tpl" "${TEMP_DIR}/rootfs/root/cilium-values.yaml.tpl"
 sed -i "s|\$POD_SUBNET|$POD_SUBNET|g" "${TEMP_DIR}/rootfs/root/cilium-values.yaml.tpl"
 
 # Store network subnet configuration

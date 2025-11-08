@@ -346,6 +346,25 @@ chroot "$MOUNT_DIR" /usr/bin/qemu-aarch64-static /bin/bash -c "
 log "Disabling swap..."
 sed -i '/swap/d' "${MOUNT_DIR}/etc/fstab" || true
 
+# Copy Kubernetes configuration templates
+log "Installing Kubernetes configuration templates..."
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "$SCRIPT_DIR/kubeadm-init.yaml.tpl" ]]; then
+    cp "$SCRIPT_DIR/kubeadm-init.yaml.tpl" "${MOUNT_DIR}/root/kubeadm-init.yaml.tpl"
+    chmod 600 "${MOUNT_DIR}/root/kubeadm-init.yaml.tpl"
+    log "✓ Copied kubeadm-init.yaml.tpl"
+else
+    warn "kubeadm-init.yaml.tpl not found at $SCRIPT_DIR"
+fi
+
+if [[ -f "$SCRIPT_DIR/cilium-values.yaml.tpl" ]]; then
+    cp "$SCRIPT_DIR/cilium-values.yaml.tpl" "${MOUNT_DIR}/root/cilium-values.yaml.tpl"
+    chmod 600 "${MOUNT_DIR}/root/cilium-values.yaml.tpl"
+    log "✓ Copied cilium-values.yaml.tpl"
+else
+    warn "cilium-values.yaml.tpl not found at $SCRIPT_DIR"
+fi
+
 # Enable required services
 log "Configuring services..."
 chroot "$MOUNT_DIR" /usr/bin/qemu-aarch64-static /bin/bash -c "
