@@ -242,42 +242,63 @@ cat > "${MOUNT_DIR}/tmp/install-k8s.sh" << 'INSTALL_SCRIPT'
 #!/bin/bash
 set -e
 
-echo "[INFO] Updating package lists..."
-apt-get update
-
 echo "[INFO] Installing prerequisites..."
-apt-get install -y \
+apt update
+apt install -y \
     apt-transport-https \
     ca-certificates \
     curl \
-    gnupg \
+    gpg \
     gettext-base
 
-echo "[INFO] Adding Kubernetes repository..."
+echo "[INFO] Adding all repositories..."
 mkdir -p /etc/apt/keyrings
+
+# Add Kubernetes repository
+echo "[INFO] - Adding Kubernetes repository..."
 curl -fsSL https://pkgs.k8s.io/core:/stable:/$KUBERNETES_VERSION/deb/Release.key | \
     gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
-
 echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/$KUBERNETES_VERSION/deb/ /" | \
     tee /etc/apt/sources.list.d/kubernetes.list
 
-echo "[INFO] Installing Kubernetes packages..."
-apt-get update
-apt-get install -y kubelet kubeadm kubectl
-apt-mark hold kubelet kubeadm kubectl
-
-echo "[INFO] Adding CRI-O repository..."
+# Add CRI-O repository
+echo "[INFO] - Adding CRI-O repository..."
 curl -fsSL https://download.opensuse.org/repositories/isv:/cri-o:/stable:/$CRIO_VERSION/deb/Release.key | \
     gpg --dearmor -o /etc/apt/keyrings/cri-o-apt-keyring.gpg
-
 echo "deb [signed-by=/etc/apt/keyrings/cri-o-apt-keyring.gpg] https://download.opensuse.org/repositories/isv:/cri-o:/stable:/$CRIO_VERSION/deb/ /" | \
     tee /etc/apt/sources.list.d/cri-o.list
 
-echo "[INFO] Installing CRI-O..."
-apt-get update
-apt-get install -y cri-o
+echo "[INFO] Updating package lists (one-time after adding all repositories)..."
+apt update
 
-echo "[INFO] Enabling CRI-O service..."
+echo "[INFO] Installing all Kubernetes, container runtime, and tool packages..."
+apt install -y \
+    kubelet \
+    kubeadm \
+    kubectl \
+    cri-o \
+    vim \
+    git \
+    wget \
+    htop \
+    jq \
+    net-tools \
+    iputils-ping \
+    dnsutils \
+    nvme-cli
+
+echo "[INFO] Holding Kubernetes packages at current version..."
+apt-mark hold kubelet kubeadm kubectl
+
+echo "[INFO] Installing Helm from binary release..."
+HELM_VERSION="v3.17.0"
+curl -fsSL https://get.helm.sh/helm-${HELM_VERSION}-linux-arm64.tar.gz -o /tmp/helm.tar.gz
+tar -zxf /tmp/helm.tar.gz -C /tmp
+mv /tmp/linux-arm64/helm /usr/local/bin/helm
+chmod +x /usr/local/bin/helm
+rm -rf /tmp/helm.tar.gz /tmp/linux-arm64
+
+echo "[INFO] Enabling services..."
 systemctl enable crio
 
 echo "[INFO] Configuring kernel modules..."
@@ -293,28 +314,8 @@ net.bridge.bridge-nf-call-ip6tables = 1
 net.ipv4.ip_forward                 = 1
 EOF
 
-echo "[INFO] Installing additional useful packages..."
-apt-get install -y \
-    vim \
-    git \
-    curl \
-    wget \
-    htop \
-    jq \
-    net-tools \
-    iputils-ping \
-    dnsutils \
-    nvme-cli
-
-echo "[INFO] Installing Helm..."
-curl -fsSL https://baltocdn.com/helm/signing.asc | gpg --dearmor -o /etc/apt/keyrings/helm-apt-keyring.gpg
-echo "deb [signed-by=/etc/apt/keyrings/helm-apt-keyring.gpg] https://baltocdn.com/helm/stable/debian/ all main" | \
-    tee /etc/apt/sources.list.d/helm.list
-apt-get update
-apt-get install -y helm
-
 echo "[INFO] Cleaning up..."
-apt-get clean
+apt clean
 rm -rf /var/lib/apt/lists/*
 
 echo "[INFO] Kubernetes installation complete!"
