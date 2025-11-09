@@ -24,9 +24,9 @@ export TOKEN="$(cat /root/kubeadm-init-token)"
 export CERT_KEY="$(cat /root/kubeadm-cert-key)"
 # Try different network interface names (Debian may use different naming)
 export HOST_IP="$(ip -4 -o addr show eth0 2>/dev/null | tr -s ' ' | cut -f4 -d' ' | cut -f1 -d/ || ip -4 -o addr show end0 2>/dev/null | tr -s ' ' | cut -f4 -d' ' | cut -f1 -d/ || ip -4 -o addr show enp1s0 2>/dev/null | tr -s ' ' | cut -f4 -d' ' | cut -f1 -d/ || ip route get 1.1.1.1 | grep -oP 'src \K\S+')"
-# Extract subnets from the template files (they're already substituted)
-export POD_SUBNET="$(grep 'podSubnet:' /root/kubeadm-init.yaml.tpl | awk '{print $2}' | tr -d '$')"
-export SERVICE_SUBNET="$(grep 'serviceSubnet:' /root/kubeadm-init.yaml.tpl | awk '{print $2}' | tr -d '$')"
+# Read subnets from plain text files (created by configure script)
+export POD_SUBNET="$(cat /root/pod-subnet)"
+export SERVICE_SUBNET="$(cat /root/service-subnet)"
 log "TOKEN: $TOKEN"
 log "CERT_KEY: $CERT_KEY"
 log "HOST_IP: $HOST_IP"
@@ -97,8 +97,8 @@ nohup /usr/bin/approve-kubelet-csrs.sh &
 log "Setting up flux"
 sleep 5 && kubectl apply -f https://github.com/controlplaneio-fluxcd/flux-operator/releases/latest/download/install.yaml
 # Check if SOPS key exists before creating secret
-if [ -f "/home/pi/.config/sops/age/keys.txt" ]; then
-    sleep 5 && kubectl create secret generic flux-sops --namespace=flux-system --from-file=age.agekey=/home/pi/.config/sops/age/keys.txt
+if [ -f "/root/keys.txt" ]; then
+    sleep 5 && kubectl create secret generic flux-sops --namespace=flux-system --from-file=age.agekey=/root/keys.txt
 else
     log "Warning: SOPS key not found, skipping flux-sops secret creation"
 fi

@@ -303,7 +303,15 @@ apt-get install -y \
     jq \
     net-tools \
     iputils-ping \
-    dnsutils
+    dnsutils \
+    nvme-cli
+
+echo "[INFO] Installing Helm..."
+curl -fsSL https://baltocdn.com/helm/signing.asc | gpg --dearmor -o /etc/apt/keyrings/helm-apt-keyring.gpg
+echo "deb [signed-by=/etc/apt/keyrings/helm-apt-keyring.gpg] https://baltocdn.com/helm/stable/debian/ all main" | \
+    tee /etc/apt/sources.list.d/helm.list
+apt-get update
+apt-get install -y helm
 
 echo "[INFO] Cleaning up..."
 apt-get clean
@@ -370,7 +378,18 @@ log "Configuring services..."
 chroot "$MOUNT_DIR" /usr/bin/qemu-aarch64-static /bin/bash -c "
     systemctl enable kubelet
     systemctl enable crio
+    systemctl enable ssh
 "
+
+# Enable SSH via boot partition method (Raspberry Pi OS standard)
+log "Enabling SSH via boot partition..."
+if [[ -d "${MOUNT_DIR}/boot/firmware" ]]; then
+    touch "${MOUNT_DIR}/boot/firmware/ssh"
+    log "✓ Created ssh file in boot partition"
+elif [[ -d "${MOUNT_DIR}/boot" ]]; then
+    touch "${MOUNT_DIR}/boot/ssh"
+    log "✓ Created ssh file in boot partition"
+fi
 
 # Step 8: Clean up chroot environment
 log "Cleaning up chroot environment..."

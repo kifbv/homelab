@@ -124,6 +124,7 @@ KEY_TYPE=$(file -b "$SSH_KEY_FILE")
 if ! echo "$KEY_TYPE" | grep -q "OpenSSH.*public key"; then
     echo "Warning: File does not appear to be an OpenSSH public key: $SSH_KEY_FILE" >&2
     echo "File type detected: $KEY_TYPE" >&2
+    #TODO: abort if file not public key
     echo "Proceeding anyway, but this might not work as expected." >&2
 fi
 
@@ -286,12 +287,8 @@ if [[ ! -f "${TEMP_DIR}/rootfs/root/cilium-values.yaml.tpl" ]]; then
     fi
 fi
 
-# Substitute network subnet values in templates
-sed -i "s|\$POD_SUBNET|$POD_SUBNET|g" "${TEMP_DIR}/rootfs/root/kubeadm-init.yaml.tpl"
-sed -i "s|\$SERVICE_SUBNET|$SERVICE_SUBNET|g" "${TEMP_DIR}/rootfs/root/kubeadm-init.yaml.tpl"
-sed -i "s|\$POD_SUBNET|$POD_SUBNET|g" "${TEMP_DIR}/rootfs/root/cilium-values.yaml.tpl"
-
-# Store network subnet configuration
+# Store network subnet configuration in plain text files
+# Templates will use these values at runtime via envsubst
 echo "$POD_SUBNET" > "${TEMP_DIR}/rootfs/root/pod-subnet"
 echo "$SERVICE_SUBNET" > "${TEMP_DIR}/rootfs/root/service-subnet"
 
@@ -400,6 +397,20 @@ chmod 600 "${TEMP_DIR}/rootfs/root"/* 2>/dev/null || true
 
 # Enable the firstboot service
 ln -sf "../k8s-firstboot.service" "${TEMP_DIR}/rootfs/etc/systemd/system/multi-user.target.wants/k8s-firstboot.service"
+
+# Enable SSH service (if not already enabled)
+echo "Ensuring SSH is enabled..."
+if [[ ! -L "${TEMP_DIR}/rootfs/etc/systemd/system/multi-user.target.wants/ssh.service" ]] && \
+   [[ ! -L "${TEMP_DIR}/rootfs/etc/systemd/system/sshd.service.wants/ssh.service" ]]; then
+    echo "Enabling SSH service..."
+    ln -sf "/lib/systemd/system/ssh.service" "${TEMP_DIR}/rootfs/etc/systemd/system/multi-user.target.wants/ssh.service"
+fi
+
+# Enable SSH via boot partition (Raspberry Pi OS standard method)
+if [[ ! -f "$BOOT_DIR/ssh" ]]; then
+    echo "Creating ssh file in boot partition..."
+    touch "$BOOT_DIR/ssh"
+fi
 
 # Copy sops secret to root home dir (required)
 echo "Copying SOPS age key"
