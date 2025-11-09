@@ -119,13 +119,35 @@ if [[ ! -f "$SSH_KEY_FILE" ]]; then
     exit 1
 fi
 
-# Use the 'file' utility to validate it looks like a public key
+# Validate SSH key is a public key, not a private key
 KEY_TYPE=$(file -b "$SSH_KEY_FILE")
-if ! echo "$KEY_TYPE" | grep -q "OpenSSH.*public key"; then
-    echo "Warning: File does not appear to be an OpenSSH public key: $SSH_KEY_FILE" >&2
+
+# Check if it's a private key (dangerous - abort immediately)
+if echo "$KEY_TYPE" | grep -qi "private key"; then
+    echo "Error: SSH key file appears to be a PRIVATE key: $SSH_KEY_FILE" >&2
     echo "File type detected: $KEY_TYPE" >&2
-    #TODO: abort if file not public key
-    echo "Proceeding anyway, but this might not work as expected." >&2
+    echo "" >&2
+    echo "SECURITY WARNING: Never use a private key here!" >&2
+    echo "Please provide the PUBLIC key file instead (usually ~/.ssh/id_*.pub)" >&2
+    echo "" >&2
+    echo "Example: --ssh-key ~/.ssh/id_ed25519.pub" >&2
+    exit 1
+fi
+
+# Check if it's a public key (expected)
+if ! echo "$KEY_TYPE" | grep -q "OpenSSH.*public key"; then
+    # Also check file content as fallback (some systems may not detect via 'file')
+    if head -n1 "$SSH_KEY_FILE" | grep -qE '^(ssh-rsa|ssh-ed25519|ecdsa-sha2-)'; then
+        # Looks like a public key based on content
+        echo "SSH key validated (public key detected)" >&2
+    else
+        echo "Error: File does not appear to be an OpenSSH public key: $SSH_KEY_FILE" >&2
+        echo "File type detected: $KEY_TYPE" >&2
+        echo "" >&2
+        echo "Expected an SSH public key file (e.g., ~/.ssh/id_ed25519.pub)" >&2
+        echo "Public keys typically start with: ssh-rsa, ssh-ed25519, or ecdsa-sha2-" >&2
+        exit 1
+    fi
 fi
 
 # Validate hostname pattern
