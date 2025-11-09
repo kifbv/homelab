@@ -9,6 +9,8 @@ set -e
 DEFAULT_INPUT_URL="https://downloads.raspberrypi.com/raspios_lite_arm64/images/raspios_lite_arm64-2025-10-02/2025-10-01-raspios-trixie-arm64-lite.img.xz"
 KUBERNETES_VERSION="${KUBERNETES_VERSION:-v1.33}"
 CRIO_VERSION="${CRIO_VERSION:-v1.33}"
+HELM_VERSION="${HELM_VERSION:-v3.17.0}"
+DEBUG=false
 
 # Color output
 RED='\033[0;31m'
@@ -43,15 +45,18 @@ Options:
                         Default: rpi5-k8s-base.img
   --k8s-version VER     Kubernetes version to install (e.g., v1.33)
                         Default: $KUBERNETES_VERSION
+  --helm-version VER    Helm version to install (e.g., v3.17.0)
+                        Default: $HELM_VERSION
   --skip-download       Skip download if input is a local file
+  --debug               Show all command output (verbose mode)
   --help                Show this help message
 
 Example:
   # Download and prepare base image
   sudo $0 --output rpi5-k8s-base.img
 
-  # Use existing image file
-  sudo $0 --input raspios-lite.img.xz --output rpi5-k8s-base.img --skip-download
+  # Use existing image file with debug output
+  sudo $0 --input raspios-lite.img.xz --output rpi5-k8s-base.img --skip-download --debug
 
 EOF
 }
@@ -81,8 +86,16 @@ while [[ $# -gt 0 ]]; do
             KUBERNETES_VERSION="$2"
             shift 2
             ;;
+        --helm-version)
+            HELM_VERSION="$2"
+            shift 2
+            ;;
         --skip-download)
             SKIP_DOWNLOAD=true
+            shift
+            ;;
+        --debug)
+            DEBUG=true
             shift
             ;;
         --help)
@@ -132,7 +145,16 @@ trap cleanup EXIT
 
 log "Starting Raspberry Pi OS base image preparation"
 log "Kubernetes version: $KUBERNETES_VERSION"
+log "Helm version: $HELM_VERSION"
 log "Output image: $OUTPUT"
+[[ "$DEBUG" == "true" ]] && log "Debug mode: enabled"
+
+# Set output redirection based on debug mode
+if [[ "$DEBUG" == "true" ]]; then
+    QUIET=""
+else
+    QUIET=">/dev/null 2>&1"
+fi
 
 # Step 1: Download or locate the image
 if [[ "$INPUT" =~ ^https?:// ]]; then
@@ -242,6 +264,10 @@ cat > "${MOUNT_DIR}/tmp/install-k8s.sh" << 'INSTALL_SCRIPT'
 #!/bin/bash
 set -e
 
+# Set locale to avoid perl warnings
+export LANG=C
+export LC_ALL=C
+
 echo "[INFO] Installing prerequisites..."
 apt update
 apt install -y \
@@ -291,12 +317,19 @@ echo "[INFO] Holding Kubernetes packages at current version..."
 apt-mark hold kubelet kubeadm kubectl
 
 echo "[INFO] Installing Helm from binary release..."
-HELM_VERSION="v3.17.0"
 curl -fsSL https://get.helm.sh/helm-${HELM_VERSION}-linux-arm64.tar.gz -o /tmp/helm.tar.gz
 tar -zxf /tmp/helm.tar.gz -C /tmp
 mv /tmp/linux-arm64/helm /usr/local/bin/helm
 chmod +x /usr/local/bin/helm
 rm -rf /tmp/helm.tar.gz /tmp/linux-arm64
+
+# Verify Helm installation
+if /usr/local/bin/helm version >/dev/null 2>&1; then
+    echo "[INFO] Helm ${HELM_VERSION} installed successfully"
+else
+    echo "[ERROR] Helm installation failed!" >&2
+    exit 1
+fi
 
 echo "[INFO] Enabling services..."
 systemctl enable crio
@@ -325,11 +358,24 @@ chmod +x "${MOUNT_DIR}/tmp/install-k8s.sh"
 
 # Export variables and run installation script
 log "Running installation script (this may take 10-15 minutes)..."
-chroot "$MOUNT_DIR" /usr/bin/qemu-aarch64-static /bin/bash -c "
-    export KUBERNETES_VERSION='$KUBERNETES_VERSION'
-    export CRIO_VERSION='$CRIO_VERSION'
-    /tmp/install-k8s.sh
-"
+
+if [[ "$DEBUG" == "true" ]]; then
+    # Show all output in debug mode
+    chroot "$MOUNT_DIR" /usr/bin/qemu-aarch64-static /bin/bash -c "
+        export KUBERNETES_VERSION='$KUBERNETES_VERSION'
+        export CRIO_VERSION='$CRIO_VERSION'
+        export HELM_VERSION='$HELM_VERSION'
+        /tmp/install-k8s.sh
+    "
+else
+    # Hide verbose package installation output in normal mode
+    chroot "$MOUNT_DIR" /usr/bin/qemu-aarch64-static /bin/bash -c "
+        export KUBERNETES_VERSION='$KUBERNETES_VERSION'
+        export CRIO_VERSION='$CRIO_VERSION'
+        export HELM_VERSION='$HELM_VERSION'
+        /tmp/install-k8s.sh
+    " 2>&1 | grep -E '^\[INFO\]|\[ERROR\]' || true
+fi
 
 # Step 7: Additional configuration
 log "Applying additional configuration..."
@@ -376,11 +422,19 @@ fi
 
 # Enable required services
 log "Configuring services..."
-chroot "$MOUNT_DIR" /usr/bin/qemu-aarch64-static /bin/bash -c "
-    systemctl enable kubelet
-    systemctl enable crio
-    systemctl enable ssh
-"
+if [[ "$DEBUG" == "true" ]]; then
+    chroot "$MOUNT_DIR" /usr/bin/qemu-aarch64-static /bin/bash -c "
+        systemctl enable kubelet
+        systemctl enable crio
+        systemctl enable ssh
+    "
+else
+    chroot "$MOUNT_DIR" /usr/bin/qemu-aarch64-static /bin/bash -c "
+        systemctl enable kubelet >/dev/null 2>&1
+        systemctl enable crio >/dev/null 2>&1
+        systemctl enable ssh >/dev/null 2>&1
+    "
+fi
 
 # Enable SSH via boot partition method (Raspberry Pi OS standard)
 log "Enabling SSH via boot partition..."
@@ -399,27 +453,26 @@ rm -f "${MOUNT_DIR}/usr/bin/qemu-aarch64-static"
 
 # Unmount everything
 log "Unmounting filesystems..."
-umount "${MOUNT_DIR}/proc"
-umount "${MOUNT_DIR}/sys"
-umount "${MOUNT_DIR}/dev/pts"
-umount "${MOUNT_DIR}/dev"
+umount "${MOUNT_DIR}/proc" 2>/dev/null || true
+umount "${MOUNT_DIR}/sys" 2>/dev/null || true
+umount "${MOUNT_DIR}/dev/pts" 2>/dev/null || true
+umount "${MOUNT_DIR}/dev" 2>/dev/null || true
 
-if mountpoint -q "${MOUNT_DIR}/boot/firmware"; then
+if mountpoint -q "${MOUNT_DIR}/boot/firmware" 2>/dev/null; then
     umount "${MOUNT_DIR}/boot/firmware"
-elif mountpoint -q "${MOUNT_DIR}/boot"; then
+elif mountpoint -q "${MOUNT_DIR}/boot" 2>/dev/null; then
     umount "${MOUNT_DIR}/boot"
 fi
 
-umount "${MOUNT_DIR}"
+umount "${MOUNT_DIR}" 2>/dev/null || true
 
 # Detach loop device
-losetup -d "$LOOP_DEVICE"
+losetup -d "$LOOP_DEVICE" 2>/dev/null || true
 LOOP_DEVICE=""
 
-# Step 9: Shrink the image back to reasonable size
-log "Optimizing image size..."
-# Truncate to remove unused space, keeping a reasonable buffer
-e2fsck -f -y "$ROOT_PARTITION" 2>/dev/null || true
+# Step 9: Optimize image
+log "Optimizing image..."
+# Note: e2fsck on already-detached device is not needed
 
 # Copy to final output location
 log "Copying to output location: $OUTPUT"
