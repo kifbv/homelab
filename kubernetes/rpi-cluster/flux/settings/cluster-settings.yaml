@@ -1,6 +1,6 @@
 apiVersion: v1
 data:
-  PRIVATE_GATEWAY_ADDRESS: 192.168.1.250
+  PRIVATE_GATEWAY_ADDRESS: 192.168.5.250
 kind: ConfigMap
 metadata:
   creationTimestamp: null
