@@ -4,7 +4,7 @@ A complete Kubernetes homelab setup running on Raspberry Pi 5 boards with GitOps
 
 ## ✨ Features
 
-- 🐧 Custom Debian-based OS (Bookworm) - Lightweight ARM64 Linux optimized for Raspberry Pi 5
+- 🐧 Custom Debian-based OS (Trixie) - Lightweight ARM64 Linux optimized for Raspberry Pi 5
 - ☸️ [kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/) - Production-grade Kubernetes installation
 - 🐳 [CRI-O](https://github.com/cri-o/cri-o/tree/main) - Lightweight container runtime
 - 🔄 [Cilium](https://www.cilium.io/) - eBPF-based networking, observability, and security
@@ -51,9 +51,9 @@ EOF
 #### 1. 🔨 Build the Raspberry Pi Image
 
 Run the `Build Raspberry Pi 5 Debian Image (Simple Cross-Compilation)` GitHub workflow to create a custom Debian-based image with:
-- Debian Bookworm (ARM64) base system built with debootstrap
-- Kubernetes components pre-installed (kubeadm, kubelet, kubectl v1.33)
-- CRI-O container runtime (v1.33)
+- Debian Trixie (ARM64) base system built with debootstrap
+- Kubernetes components pre-installed (kubeadm, kubelet, kubectl v1.34)
+- CRI-O container runtime (v1.34)
 - Helm for package management
 - Official Raspberry Pi 5 firmware and kernel
 - All necessary dependencies for both control plane and worker nodes
@@ -229,3 +229,13 @@ The control plane node automatically runs a script during the first 24 hours to 
 The script logs its activities to `/var/log/approve-kubelet-csrs.log` on the control plane node.
 
 For more details, see the [Kubernetes documentation on kubelet serving certificates](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-certs/#kubelet-serving-certs).
+
+## 🔧 Troubleshooting
+
+Having issues with your cluster? Check the comprehensive [Troubleshooting Guide](./TROUBLESHOOTING.md) for solutions to common problems including:
+
+- Storage issues (Rook-Ceph, PVC pending)
+- Gateway API connectivity problems
+- Container image pull failures
+- Application deployment issues
+- And more with detailed debugging commands
