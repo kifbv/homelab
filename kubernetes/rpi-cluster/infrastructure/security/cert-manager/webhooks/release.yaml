@@ -19,6 +19,6 @@ spec:
     certManager:
       namespace: security
     image:
-      repository: fratier/porkbun-webhook
+      repository: docker.io/fratier/porkbun-webhook
       tag: arm64-1.0
       pullPolicy: IfNotPresent

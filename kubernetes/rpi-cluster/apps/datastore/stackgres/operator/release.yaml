@@ -13,5 +13,5 @@ spec:
         kind: HelmRepository
         name: stackgres
         namespace: flux-system
-      version: 1.16.x
+      version: 1.17.x
   interval: 1m0s
