@@ -363,9 +363,9 @@ echo "Configuring firstboot service for $NODE_TYPE"
 cat > "${TEMP_DIR}/rootfs/etc/systemd/system/k8s-firstboot.service" << EOF
 [Unit]
 Description=Kubernetes First Boot Setup
-After=network-online.target
+After=network-online.target crio.service
 Wants=network-online.target
-Before=crio.service
+Requires=crio.service
 ConditionPathExists=!/var/lib/k8s-firstboot-done
 
 [Service]

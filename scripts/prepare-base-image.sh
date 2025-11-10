@@ -7,9 +7,9 @@ set -e
 
 # Configuration
 DEFAULT_INPUT_URL="https://downloads.raspberrypi.com/raspios_lite_arm64/images/raspios_lite_arm64-2025-10-02/2025-10-01-raspios-trixie-arm64-lite.img.xz"
-KUBERNETES_VERSION="${KUBERNETES_VERSION:-v1.33}"
-CRIO_VERSION="${CRIO_VERSION:-v1.33}"
-HELM_VERSION="${HELM_VERSION:-v3.17.0}"
+KUBERNETES_VERSION="${KUBERNETES_VERSION:-v1.34}"
+CRIO_VERSION="${CRIO_VERSION:-v1.34}"
+HELM_VERSION="${HELM_VERSION:-v3.19.0}"
 DEBUG=false
 
 # Color output
@@ -45,7 +45,7 @@ Options:
                         Default: rpi5-k8s-base.img
   --k8s-version VER     Kubernetes version to install (e.g., v1.33)
                         Default: $KUBERNETES_VERSION
-  --helm-version VER    Helm version to install (e.g., v3.17.0)
+  --helm-version VER    Helm version to install (e.g., v3.19.0)
                         Default: $HELM_VERSION
   --skip-download       Skip download if input is a local file
   --debug               Show all command output (verbose mode)
@@ -401,6 +401,20 @@ chroot "$MOUNT_DIR" /usr/bin/qemu-aarch64-static /bin/bash -c "
 log "Disabling swap..."
 sed -i '/swap/d' "${MOUNT_DIR}/etc/fstab" || true
 
+# Disable zram swap (Raspberry Pi OS default)
+log "Disabling zram swap service..."
+if [[ "$DEBUG" == "true" ]]; then
+    chroot "$MOUNT_DIR" /usr/bin/qemu-aarch64-static /bin/bash -c "
+        systemctl disable dphys-swapfile 2>/dev/null || true
+        systemctl mask dphys-swapfile 2>/dev/null || true
+    "
+else
+    chroot "$MOUNT_DIR" /usr/bin/qemu-aarch64-static /bin/bash -c "
+        systemctl disable dphys-swapfile 2>/dev/null || true
+        systemctl mask dphys-swapfile 2>/dev/null || true
+    " >/dev/null 2>&1 || true
+fi
+
 # Copy Kubernetes configuration templates
 log "Installing Kubernetes configuration templates..."
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -419,6 +433,27 @@ if [[ -f "$SCRIPT_DIR/cilium-values.yaml.tpl" ]]; then
 else
     warn "cilium-values.yaml.tpl not found at $SCRIPT_DIR"
 fi
+
+# Generate bootstrap tokens for cluster
+log "Generating bootstrap tokens..."
+
+# Generate bootstrap token (format: xxxxxx.xxxxxxxxxxxxxxxx)
+TOKEN_PART1=$(tr -dc 'a-f0-9' < /dev/urandom | head -c 6)
+TOKEN_PART2=$(tr -dc 'a-f0-9' < /dev/urandom | head -c 16)
+BOOTSTRAP_TOKEN="${TOKEN_PART1}.${TOKEN_PART2}"
+
+# Generate certificate key (64 hex chars)
+CERT_KEY=$(tr -dc 'a-f0-9' < /dev/urandom | head -c 64)
+
+# Write tokens to image
+echo "$BOOTSTRAP_TOKEN" > "${MOUNT_DIR}/root/kubeadm-init-token"
+echo "$CERT_KEY" > "${MOUNT_DIR}/root/kubeadm-cert-key"
+chmod 600 "${MOUNT_DIR}/root/kubeadm-init-token"
+chmod 600 "${MOUNT_DIR}/root/kubeadm-cert-key"
+
+log "✓ Bootstrap token: $BOOTSTRAP_TOKEN"
+log "✓ Certificate key: $CERT_KEY"
+log "  (tokens embedded in base image)"
 
 # Enable required services
 log "Configuring services..."
@@ -444,6 +479,32 @@ if [[ -d "${MOUNT_DIR}/boot/firmware" ]]; then
 elif [[ -d "${MOUNT_DIR}/boot" ]]; then
     touch "${MOUNT_DIR}/boot/ssh"
     log "✓ Created ssh file in boot partition"
+fi
+
+# Configure boot cmdline with required cgroup settings for Kubernetes
+log "Configuring boot cmdline for Kubernetes cgroups..."
+if [[ -d "${MOUNT_DIR}/boot/firmware" ]]; then
+    CMDLINE_FILE="${MOUNT_DIR}/boot/firmware/cmdline.txt"
+elif [[ -d "${MOUNT_DIR}/boot" ]]; then
+    CMDLINE_FILE="${MOUNT_DIR}/boot/cmdline.txt"
+else
+    warn "Could not find cmdline.txt location"
+    CMDLINE_FILE=""
+fi
+
+if [[ -n "$CMDLINE_FILE" && -f "$CMDLINE_FILE" ]]; then
+    # Read current cmdline
+    CURRENT_CMDLINE=$(cat "$CMDLINE_FILE")
+
+    # Add cgroup settings if not present
+    if ! echo "$CURRENT_CMDLINE" | grep -q "cgroup_enable=memory"; then
+        echo "$CURRENT_CMDLINE cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory" > "$CMDLINE_FILE"
+        log "✓ Added Kubernetes cgroup settings to cmdline.txt"
+    else
+        log "✓ Kubernetes cgroup settings already present in cmdline.txt"
+    fi
+else
+    warn "Could not modify cmdline.txt"
 fi
 
 # Step 8: Clean up chroot environment

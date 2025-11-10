@@ -8,7 +8,7 @@ This is a Kubernetes homelab running on Raspberry Pi 5 hardware with a custom De
 
 **Key Technologies:**
 - Custom Debian Bookworm ARM64 image built via cross-compilation
-- Kubernetes v1.33 installed via kubeadm
+- Kubernetes v1.34 installed via kubeadm
 - CRI-O container runtime
 - Cilium for CNI (replacing kube-proxy) with Gateway API support
 - Flux v2 for GitOps continuous delivery

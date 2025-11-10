@@ -66,7 +66,7 @@ sudo ./scripts/prepare-base-image.sh --output rpi5-k8s-base.img
 
 This will:
 - Download official Raspberry Pi OS Lite (Trixie ARM64)
-- Install Kubernetes v1.33 (kubeadm, kubelet, kubectl)
+- Install Kubernetes v1.34 (kubeadm, kubelet, kubectl)
 - Install and configure CRI-O container runtime
 - Configure system for Kubernetes (kernel parameters, cgroup settings)
 - Create a ~6GB base image ready for customization
@@ -138,13 +138,13 @@ sudo ./prepare-base-image.sh [OPTIONS]
 **Options:**
 - `--input URL|PATH` - Raspberry Pi OS image URL or local path (default: official Trixie ARM64 Lite)
 - `--output PATH` - Output image file path (default: `rpi5-k8s-base.img`)
-- `--k8s-version VER` - Kubernetes version to install (default: `v1.33`)
+- `--k8s-version VER` - Kubernetes version to install (default: `v1.34`)
 - `--skip-download` - Skip download if using local file
 - `--help` - Show help message
 
 **What it installs:**
 - Kubernetes: kubelet, kubeadm, kubectl (from pkgs.k8s.io)
-- Container runtime: CRI-O v1.33 (from OpenSUSE OBS repository)
+- Container runtime: CRI-O v1.34 (from OpenSUSE OBS repository)
 - Tools: vim, git, curl, wget, htop, jq, net-tools
 - Kernel modules: overlay, br_netfilter
 - Sysctl configuration for Kubernetes networking

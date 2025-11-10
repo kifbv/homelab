@@ -5,7 +5,7 @@ kubeProxyReplacement: true
 
 ipam:
   operator:
-    clusterPoolIPv4PodCIDR: $POD_SUBNET
+    clusterPoolIPv4PodCIDRList: [$POD_SUBNET]
 
 hubble:
   relay:

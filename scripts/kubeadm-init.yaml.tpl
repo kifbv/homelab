@@ -14,6 +14,7 @@ localAPIEndpoint:
   advertiseAddress: "$HOST_IP"
   bindPort: 6443
 nodeRegistration:
+  criSocket: unix:///var/run/crio/crio.sock
   imagePullPolicy: IfNotPresent
   imagePullSerial: true
   name: controlplane
