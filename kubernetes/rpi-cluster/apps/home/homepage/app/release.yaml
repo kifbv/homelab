@@ -16,7 +16,7 @@ spec:
   interval: 30m
   values:
     image:
-      tag: v1.2
+      tag: v1.6.1
     config:
       bookmarks:
         - Developer:
