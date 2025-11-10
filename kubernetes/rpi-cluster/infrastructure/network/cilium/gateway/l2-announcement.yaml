@@ -6,6 +6,6 @@ metadata:
   namespace: kube-system
 spec:
   interfaces:
-    - ^end[0-9]+ # host interface regex
+    - ^eth[0-9]+ # host interface regex
   externalIPs: true
   loadBalancerIPs: true
