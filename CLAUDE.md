@@ -7,9 +7,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This is a Kubernetes homelab running on Raspberry Pi 5 hardware with a custom Debian-based OS image. The cluster uses GitOps principles via Flux for continuous delivery and is designed for self-healing, automated operations.
 
 **Key Technologies:**
-- Custom Debian Bookworm ARM64 image built via cross-compilation
+- Official Raspberry Pi OS (Debian Trixie ARM64) as base image
 - Kubernetes v1.34 installed via kubeadm
-- CRI-O container runtime
+- CRI-O v1.34 container runtime
 - Cilium for CNI (replacing kube-proxy) with Gateway API support
 - Flux v2 for GitOps continuous delivery
 - SOPS with age for secret encryption
@@ -22,9 +22,10 @@ The Raspberry Pi 5 images are built using a two-stage process based on official 
 
 **Stage 1: Base Image Preparation** (run once)
 - Downloads official Raspberry Pi OS Lite (Trixie ARM64)
-- Uses QEMU chroot to install Kubernetes components (kubeadm, kubelet, kubectl)
-- Installs and configures CRI-O container runtime
-- Configures system for Kubernetes (kernel parameters, cgroup settings)
+- Uses QEMU chroot to install Kubernetes v1.34 components (kubeadm, kubelet, kubectl)
+- Installs and configures CRI-O v1.34 container runtime
+- Configures system for Kubernetes (kernel parameters, cgroup settings, swap disable)
+- Generates bootstrap tokens for cluster joining
 - Creates a reusable base image (~6GB)
 
 Script: `scripts/prepare-base-image.sh`
@@ -51,8 +52,9 @@ This script copies and then mounts the image to:
 - Installs SSH public key for the pi user
 - Copies SOPS age key to /root/keys.txt
 - Selects and installs the appropriate bootstrap script based on hostname pattern
-- Creates the FluxInstance resource for GitOps
+- Creates the FluxInstance resource for GitOps (watches main branch)
 - Configures network subnets
+- Configures systemd service to wait for CRI-O before running bootstrap
 
 **Hostname patterns determine node role:**
 - `controlplane` → First control plane node (runs `controlplane-template.sh`)
@@ -60,9 +62,9 @@ This script copies and then mounts the image to:
 - `node[0-9]` → Worker nodes (runs `node-template.sh`)
 
 **Bootstrap templates location:** `scripts/`
-- `controlplane-template.sh` - Initializes cluster with kubeadm, installs Cilium and Flux
-- `controlplane-secondary-template.sh` - Joins as additional control plane
-- `node-template.sh` - Joins as worker node
+- `controlplane-template.sh` - Waits for CRI-O, disables swap, initializes cluster with kubeadm, installs Cilium and Flux
+- `controlplane-secondary-template.sh` - Waits for CRI-O, disables swap, joins as additional control plane
+- `node-template.sh` - Waits for CRI-O, disables swap, joins as worker node
 - `kubeadm-init.yaml.tpl` - Kubeadm init configuration template (uses envsubst)
 - `cilium-values.yaml.tpl` - Cilium Helm values template (uses envsubst)
 

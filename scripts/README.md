@@ -67,8 +67,10 @@ sudo ./scripts/prepare-base-image.sh --output rpi5-k8s-base.img
 This will:
 - Download official Raspberry Pi OS Lite (Trixie ARM64)
 - Install Kubernetes v1.34 (kubeadm, kubelet, kubectl)
-- Install and configure CRI-O container runtime
+- Install and configure CRI-O v1.34 container runtime
 - Configure system for Kubernetes (kernel parameters, cgroup settings)
+- Disable swap (zram) for Kubernetes compatibility
+- Generate bootstrap tokens for automated cluster joining
 - Create a ~6GB base image ready for customization
 
 **Time:** ~15-20 minutes on first run
@@ -120,9 +122,11 @@ sudo dd if=rpi5-k8s-base.img of=/dev/sdX bs=4M status=progress conv=fsync
 ```
 
 Boot the Raspberry Pi. The `k8s-firstboot.service` will automatically:
+- Wait for CRI-O container runtime to be ready
+- Disable swap (required for Kubernetes)
 - Initialize or join the Kubernetes cluster (based on hostname)
 - Install Cilium CNI (control plane only)
-- Set up Flux GitOps (control plane only)
+- Set up Flux GitOps (control plane only, watches main branch)
 - Configure kubelet certificates
 
 ## Detailed Usage
@@ -197,28 +201,34 @@ The bootstrap process is automated via systemd service and role-specific scripts
 ### controlplane-template.sh
 
 First control plane node initialization:
-1. Generates kubeadm configuration from template
-2. Runs `kubeadm init` with specified network settings
-3. Installs Gateway API CRDs
-4. Installs Cilium CNI via Helm
-5. Installs Flux Operator
-6. Creates flux-sops secret for SOPS decryption
-7. Applies FluxInstance to enable GitOps
-8. Starts CSR auto-approval script (24 hours)
-9. Copies kubeconfig to pi user
+1. Waits for CRI-O socket to be ready (up to 60 seconds)
+2. Disables swap (zram) to meet Kubernetes requirements
+3. Generates kubeadm configuration from template
+4. Runs `kubeadm init` with specified network settings
+5. Installs Gateway API CRDs
+6. Installs Cilium CNI via Helm
+7. Installs Flux Operator
+8. Creates flux-sops secret for SOPS decryption
+9. Applies FluxInstance to enable GitOps (watches main branch)
+10. Starts CSR auto-approval script (24 hours)
+11. Copies kubeconfig to pi user
 
 ### controlplane-secondary-template.sh
 
 Additional control plane nodes:
-1. Reads join configuration
-2. Joins cluster with `--control-plane` flag
-3. Copies kubeconfig to pi user
+1. Waits for CRI-O socket to be ready (up to 60 seconds)
+2. Disables swap (zram) to meet Kubernetes requirements
+3. Reads join configuration (token, certificate key)
+4. Joins cluster with `--control-plane` flag
+5. Copies kubeconfig to pi user
 
 ### node-template.sh
 
 Worker nodes:
-1. Reads join configuration
-2. Joins cluster as worker
+1. Waits for CRI-O socket to be ready (up to 60 seconds)
+2. Disables swap (zram) to meet Kubernetes requirements
+3. Reads join configuration (token)
+4. Joins cluster as worker
 
 ## Network Configuration
 
