@@ -41,7 +41,7 @@ spec:
     allowDeviceClassUpdate: true
     allowOsdCrushWeightUpdate: false
     nodes:
-      - name: node1
+      - name: node0
         devices:
           - name: /dev/nvme0n1
     #deviceFilter:
