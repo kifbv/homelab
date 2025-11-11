@@ -23,8 +23,7 @@ spec:
     # Fix CRI-O short name issue for sidecar
     sidecar:
       image:
-        registry: docker.io
-        repository: kiwigrid/k8s-sidecar
+        repository: docker.io/kiwigrid/k8s-sidecar
         tag: 1.30.2
     # loki settings
     loki:
