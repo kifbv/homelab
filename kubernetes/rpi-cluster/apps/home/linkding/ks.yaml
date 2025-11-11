@@ -11,6 +11,7 @@ spec:
       name: flux-sops
   dependsOn:
     - name: rook-ceph-rbd
+    - name: cloudnative-pg-clusters
   interval: 1h
   path: ./kubernetes/rpi-cluster/apps/home/linkding/app
   postBuild:

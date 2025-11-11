@@ -1,0 +1,11 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: linkding-postgres-config
+  namespace: home
+data:
+  LD_DB_ENGINE: "postgres"
+  LD_DB_DATABASE: "linkding"
+  LD_DB_HOST: "postgres-cluster-rw.datastore.svc.cluster.local"
+  LD_DB_PORT: "5432"

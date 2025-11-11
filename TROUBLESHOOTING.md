@@ -637,6 +637,175 @@ sops --decrypt kubernetes/rpi-cluster/flux/settings/cluster-secrets.sops.yaml
 cat <file>.sops.yaml | grep -A 5 "sops:"
 ```
 
+## Troubleshooting
+
+### Common Issues
+
+#### Rook-Ceph: No OSDs Created (OSD count 0)
+
+**Symptoms:**
+- Ceph cluster shows `HEALTH_WARN`
+- Error: `OSD count 0 < osd_pool_default_size 1`
+- PVCs stuck in `Pending` state
+- No `rook-ceph-osd` pods running
+
+**Root Cause:**
+The CephCluster configuration specifies incorrect node names in the storage section.
+
+**Solution:**
+Check which file is active in `infrastructure/storage/rook-ceph/cluster/kustomization.yaml`:
+- If using `cluster-test.yaml`: Update node names to match actual worker nodes
+- If using `release.yaml`: Update the HelmRelease values
+
+Example fix for `cluster-test.yaml`:
+```yaml
+storage:
+  nodes:
+    - name: node0  # Must match actual node name from `kubectl get nodes`
+      devices:
+        - name: /dev/nvme0n1
+```
+
+**Verification:**
+```bash
+kubectl get pods -n storage -l app=rook-ceph-osd
+kubectl -n storage get cephcluster my-cluster -o jsonpath='{.status.ceph.health}'
+```
+
+#### CRI-O: ImageInspectError with Ambiguous Short Names
+
+**Symptoms:**
+- Pod shows `ImageInspectError` status
+- Error: `short name mode is enforcing, but image name returns ambiguous list`
+- Container fails to pull image
+
+**Root Cause:**
+CRI-O rejects short image names (e.g., `fratier/porkbun-webhook`) that could refer to multiple registries.
+
+**Solution:**
+Use fully qualified image names in HelmRelease values:
+
+```yaml
+# Before (fails):
+image:
+  repository: fratier/porkbun-webhook
+
+# After (works):
+image:
+  repository: docker.io/fratier/porkbun-webhook
+```
+
+Common registries:
+- Docker Hub: `docker.io/`
+- GitHub Container Registry: `ghcr.io/`
+- Quay: `quay.io/`
+
+#### Gateway API: LoadBalancer IP Not Accessible from Outside Cluster
+
+**Symptoms:**
+- Gateway shows `PROGRAMMED=True` status
+- LoadBalancer service has correct EXTERNAL-IP
+- HTTPRoutes show `ACCEPTED=True`
+- Cannot reach services from outside cluster (connection timeout/refused)
+
+**Root Cause:**
+Cilium L2AnnouncementPolicy interface pattern doesn't match Raspberry Pi network interfaces.
+
+**Solution:**
+Update `infrastructure/network/cilium/gateway/l2-announcement.yaml`:
+
+```yaml
+spec:
+  interfaces:
+    - ^eth[0-9]+  # Raspberry Pi uses eth0, not end0
+```
+
+**Verification:**
+```bash
+# Check network interfaces on nodes
+kubectl get nodes -o wide
+kubectl exec -n kube-system ds/cilium -- ip link show
+
+# Verify L2 announcements
+kubectl logs -n kube-system ds/cilium | grep -i announce
+
+# Test connectivity
+curl -k -v https://<GATEWAY_IP>
+```
+
+#### StackGres: CrashLoopBackOff on ARM64
+
+**Symptoms:**
+- StackGres operator pod in `CrashLoopBackOff`
+- Error: `Fatal error: Failed to create the main Isolate. (code 24)`
+- Container exits immediately after start
+
+**Root Cause:**
+GraalVM native image compatibility issue on ARM64 architecture. Some versions of StackGres may not have proper ARM64 support.
+
+**Solutions:**
+1. **Check for ARM64-specific images:**
+   ```bash
+   # Look for tags like -arm64 or -aarch64
+   ```
+
+2. **Use alternative PostgreSQL operators:**
+   - CloudNativePG (good ARM64 support)
+   - Zalando Postgres Operator
+   - Crunchy Data Postgres Operator
+
+3. **Deploy PostgreSQL directly:**
+   - Use StatefulSet without operator overhead
+
+4. **Wait for upstream fix:**
+   - Check StackGres releases for ARM64 compatibility updates
+
+#### Helm Version Incompatibility
+
+**Symptoms:**
+- HelmRelease shows `InstallFailed`
+- Error: `chart requires kubeVersion: X.XX.X-X - X.XX.x-O which is incompatible with Kubernetes vX.XX.X`
+
+**Solution:**
+Update the HelmRelease to use a compatible chart version:
+
+```yaml
+spec:
+  chart:
+    spec:
+      version: X.XX.x  # Use version range that supports your Kubernetes version
+```
+
+Check chart repository or ArtifactHub for version compatibility information.
+
+### Debugging Commands
+
+**Check overall cluster health:**
+```bash
+kubectl get nodes
+kubectl get pods -A --field-selector=status.phase!=Running,status.phase!=Succeeded
+flux get kustomizations -A
+flux get helmreleases -A
+```
+
+**Inspect specific resource:**
+```bash
+kubectl describe <resource-type> <name> -n <namespace>
+kubectl logs <pod-name> -n <namespace>
+kubectl get events -n <namespace> --sort-by='.lastTimestamp'
+```
+
+**Cilium debugging:**
+```bash
+kubectl exec -n kube-system ds/cilium -- cilium-dbg status
+kubectl exec -n kube-system ds/cilium -- cilium-dbg service list
+```
+
+**Ceph debugging:**
+```bash
+kubectl -n storage get cephcluster
+kubectl -n storage exec -it deploy/rook-ceph-operator -- ceph status
+```
 ---
 
 ## Additional Resources

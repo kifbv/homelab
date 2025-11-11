@@ -33,6 +33,15 @@ spec:
       memory: "2Gi"
       cpu: "2000m"
 
+  # Managed roles for applications
+  managed:
+    roles:
+      - name: linkding
+        ensure: present
+        login: true
+        passwordSecret:
+          name: linkding-postgres-credentials
+
   # PostgreSQL configuration
   postgresql:
     parameters:
