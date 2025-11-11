@@ -9,6 +9,7 @@ As an autonomous agent you will:
 2. Provide the full user request and your current plan.
 3. Optionally, record resolved issues with vibe_learn.
 4. Use ref to search for technical and up to date documentation.
+5. **IMPORTANT**: When implementing new apps or infrastructure components, consult `GITOPS.md` for comprehensive repository structure, patterns, and step-by-step guides.
 
 ## Project Overview
 
@@ -94,6 +95,8 @@ This script copies and then mounts the image to:
 
 ### GitOps Structure
 
+**For comprehensive documentation on repository structure, patterns, and adding new components, see `GITOPS.md`.**
+
 The cluster is managed by Flux with a hierarchical structure:
 
 ```
@@ -106,11 +109,12 @@ kubernetes/rpi-cluster/
 │   ├── network/                     # Cilium CNI
 │   ├── gateway/                     # Gateway API CRDs
 │   ├── security/                    # cert-manager, webhooks
+│   ├── database/                    # CloudNativePG operator
 │   └── storage/                     # Rook-Ceph storage
 └── apps/                            # Application workloads
     ├── home/                        # Homepage, Linkding
     ├── monitoring/                  # Prometheus, Grafana, Loki, metrics-server
-    └── datastore/                   # StackGres PostgreSQL
+    └── datastore/                   # CloudNativePG clusters
 ```
 
 **Flux Kustomization hierarchy (from `flux/config/cluster.yaml`):**
@@ -124,6 +128,13 @@ kubernetes/rpi-cluster/
 - `app/release.yaml` - HelmRelease or manifests
 - `app/kustomization.yaml` - Kustomize configuration
 - `crds/` - Optional CRD installation (installed before main app)
+
+**See `GITOPS.md` for:**
+- Complete directory structure documentation
+- Component organization patterns
+- Dependency management strategies
+- Step-by-step guides for adding new apps and infrastructure
+- Best practices alignment
 
 ### Secret Management
 
