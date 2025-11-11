@@ -1,0 +1,43 @@
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgres-cluster
+  namespace: datastore
+spec:
+  # Single instance (no HA as requested)
+  instances: 1
+
+  # PostgreSQL 17 (latest)
+  imageName: ghcr.io/cloudnative-pg/postgresql:17
+
+  # Storage using Rook-Ceph (already optimized with replica: 1)
+  storage:
+    storageClass: rook-ceph-block
+    size: 10Gi
+
+  # Bootstrap configuration
+  bootstrap:
+    initdb:
+      database: app
+      owner: app
+      secret:
+        name: postgres-app-credentials
+
+  # Resources for Raspberry Pi
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
+    limits:
+      memory: "2Gi"
+      cpu: "2000m"
+
+  # PostgreSQL configuration
+  postgresql:
+    parameters:
+      max_connections: "100"
+      shared_buffers: "256MB"
+      effective_cache_size: "1GB"
+      work_mem: "4MB"
+      maintenance_work_mem: "128MB"

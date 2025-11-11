@@ -1,0 +1,20 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cloudnative-pg-clusters
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: cloudnative-pg-operator
+  interval: 10m
+  path: "./kubernetes/rpi-cluster/apps/datastore/cloudnative-pg/clusters"
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  targetNamespace: datastore
+  decryption:
+    provider: sops
+    secretRef:
+      name: flux-sops

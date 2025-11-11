@@ -4,5 +4,3 @@ kind: Kustomization
 resources:
   - namespace.yaml
   - cloudnative-pg/ks.yaml
-  # Commented out during migration to CloudNativePG
-  # - stackgres/ks.yaml
