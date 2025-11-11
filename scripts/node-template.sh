@@ -40,6 +40,30 @@ swapoff -a
 systemctl mask dev-zram0.swap 2>/dev/null || true
 log "Swap disabled"
 
+# Format NVMe drives for Ceph storage
+log "Checking for NVMe drives to format..."
+if command -v nvme &> /dev/null; then
+	for nvme_dev in /dev/nvme[0-9]n[0-9]; do
+		if [ -b "$nvme_dev" ]; then
+			log "Found NVMe device: $nvme_dev"
+			# Check if device has any Ceph or filesystem signatures
+			if lsblk -n -o FSTYPE "$nvme_dev" 2>/dev/null | grep -qE 'ceph_bluestore|xfs|ext4|btrfs'; then
+				log "Device $nvme_dev has existing data, formatting..."
+				nvme format "$nvme_dev" -s 0 -n 1 2>&1 | tee -a $LOG_FILE || {
+					log "WARNING: nvme format failed, trying fallback method"
+					sgdisk --zap-all "$nvme_dev" 2>&1 | tee -a $LOG_FILE || true
+					dd if=/dev/zero of="$nvme_dev" bs=1M count=100 2>&1 | tee -a $LOG_FILE || true
+				}
+				log "Device $nvme_dev formatted successfully"
+			else
+				log "Device $nvme_dev appears clean, skipping format"
+			fi
+		fi
+	done
+else
+	log "nvme-cli not found, skipping NVMe format"
+fi
+
 # Get configuration values
 log "Retrieving configuration values"
 TOKEN="$(cat /root/kubeadm-init-token)"
