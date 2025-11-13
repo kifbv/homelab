@@ -1,0 +1,135 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: storage-alerts
+  namespace: monitoring
+  labels:
+    app: kube-prometheus-stack
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: storage.rules
+      interval: 1m
+      rules:
+        # Ceph Cluster Health Warning
+        - alert: CephClusterHealthWarning
+          expr: |
+            ceph_health_status == 1
+          for: 5m
+          labels:
+            severity: warning
+            component: storage
+          annotations:
+            summary: "Ceph cluster health is in WARNING state"
+            description: |
+              Ceph cluster health is degraded (HEALTH_WARN).
+              Check cluster status: kubectl -n storage exec -it deploy/rook-ceph-tools -- ceph status
+              Check health details: kubectl -n storage exec -it deploy/rook-ceph-tools -- ceph health detail
+
+        # Ceph Cluster Health Critical
+        - alert: CephClusterHealthCritical
+          expr: |
+            ceph_health_status == 2
+          for: 1m
+          labels:
+            severity: critical
+            component: storage
+          annotations:
+            summary: "Ceph cluster health is in ERROR state"
+            description: |
+              Ceph cluster health is in ERROR state (HEALTH_ERR).
+              IMMEDIATE ACTION REQUIRED!
+              Check cluster status: kubectl -n storage exec -it deploy/rook-ceph-tools -- ceph status
+
+        # Ceph Storage Utilization Warning (85%)
+        - alert: CephStorageUtilizationHigh
+          expr: |
+            (ceph_cluster_total_used_bytes / ceph_cluster_total_bytes) * 100 > 85
+          for: 10m
+          labels:
+            severity: warning
+            component: storage
+          annotations:
+            summary: "Ceph storage utilization is high"
+            description: |
+              Ceph cluster storage is {{ $value | humanizePercentage }} full.
+              Total capacity: {{ with query "ceph_cluster_total_bytes" }}{{ . | first | value | humanize1024 }}B{{ end }}
+              Used: {{ with query "ceph_cluster_total_used_bytes" }}{{ . | first | value | humanize1024 }}B{{ end }}
+              Consider cleaning up old data or expanding storage.
+
+        # Ceph Storage Utilization Critical (95%)
+        - alert: CephStorageUtilizationCritical
+          expr: |
+            (ceph_cluster_total_used_bytes / ceph_cluster_total_bytes) * 100 > 95
+          for: 5m
+          labels:
+            severity: critical
+            component: storage
+          annotations:
+            summary: "Ceph storage utilization is CRITICAL"
+            description: |
+              Ceph cluster storage is {{ $value | humanizePercentage }} full - CRITICAL!
+              Total capacity: {{ with query "ceph_cluster_total_bytes" }}{{ . | first | value | humanize1024 }}B{{ end }}
+              Used: {{ with query "ceph_cluster_total_used_bytes" }}{{ . | first | value | humanize1024 }}B{{ end }}
+              IMMEDIATE ACTION REQUIRED: Free up space or expand storage NOW.
+
+        # Ceph OSD Down
+        - alert: CephOSDDown
+          expr: |
+            ceph_osd_up == 0
+          for: 5m
+          labels:
+            severity: warning
+            component: storage
+          annotations:
+            summary: "Ceph OSD is down"
+            description: |
+              Ceph OSD {{ $labels.ceph_daemon }} is down.
+              Check OSD status: kubectl -n storage exec -it deploy/rook-ceph-tools -- ceph osd tree
+              Check OSD logs: kubectl logs -n storage -l app=rook-ceph-osd
+
+        # PVC Pending for too long
+        - alert: PersistentVolumeClaimPendingTooLong
+          expr: |
+            kube_persistentvolumeclaim_status_phase{phase="Pending"} == 1
+          for: 10m
+          labels:
+            severity: warning
+            component: storage
+          annotations:
+            summary: "PVC is stuck in Pending state"
+            description: |
+              PersistentVolumeClaim {{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }} has been pending for 10 minutes.
+              Check PVC status: kubectl describe pvc {{ $labels.persistentvolumeclaim }} -n {{ $labels.namespace }}
+              Check storage class availability: kubectl get storageclass
+
+        # PV Usage High (90%)
+        - alert: PersistentVolumeUsageHigh
+          expr: |
+            (kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes) * 100 > 90
+          for: 5m
+          labels:
+            severity: warning
+            component: storage
+          annotations:
+            summary: "PersistentVolume usage is high"
+            description: |
+              PersistentVolume {{ $labels.persistentvolumeclaim }} in namespace {{ $labels.namespace }} is {{ $value | humanizePercentage }} full.
+              Capacity: {{ with printf "kubelet_volume_stats_capacity_bytes{namespace='%s',persistentvolumeclaim='%s'}" .Labels.namespace .Labels.persistentvolumeclaim | query }}{{ . | first | value | humanize1024 }}B{{ end }}
+              Used: {{ with printf "kubelet_volume_stats_used_bytes{namespace='%s',persistentvolumeclaim='%s'}" .Labels.namespace .Labels.persistentvolumeclaim | query }}{{ . | first | value | humanize1024 }}B{{ end }}
+
+        # Rook-Ceph Operator Not Ready
+        - alert: RookCephOperatorDown
+          expr: |
+            kube_deployment_status_replicas_available{namespace="storage",deployment="rook-ceph-operator"} == 0
+          for: 5m
+          labels:
+            severity: critical
+            component: storage
+          annotations:
+            summary: "Rook-Ceph operator is not available"
+            description: |
+              Rook-Ceph operator has no available replicas.
+              This means storage operations cannot be managed.
+              Check operator logs: kubectl logs -n storage deploy/rook-ceph-operator

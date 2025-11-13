@@ -27,6 +27,58 @@ spec:
 
     alertmanager:
       enabled: true
+      config:
+        global:
+          resolve_timeout: 5m
+
+        route:
+          group_by: ['alertname', 'cluster', 'service']
+          group_wait: 10s
+          group_interval: 5m
+          repeat_interval: 12h
+          receiver: 'null'
+          routes:
+            # Critical alerts go to PagerDuty immediately
+            - receiver: 'pagerduty-critical'
+              matchers:
+                - severity = "critical"
+              group_wait: 10s
+              group_interval: 1m
+              repeat_interval: 5m
+              continue: false
+
+            # Warning alerts are batched (AlertManager UI only)
+            - receiver: 'alertmanager-ui'
+              matchers:
+                - severity = "warning"
+              group_wait: 30s
+              group_interval: 5m
+              repeat_interval: 12h
+              continue: false
+
+        receivers:
+          # Null receiver (catches all unmatched alerts)
+          - name: 'null'
+
+          # PagerDuty for critical alerts
+          - name: 'pagerduty-critical'
+            pagerduty_configs:
+              - routing_key: ${PAGERDUTY_INTEGRATION_KEY}
+                description: '{{ .CommonAnnotations.summary }}'
+                details:
+                  firing: '{{ template "pagerduty.default.instances" .Alerts.Firing }}'
+                  resolved: '{{ template "pagerduty.default.instances" .Alerts.Resolved }}'
+                  num_firing: '{{ .Alerts.Firing | len }}'
+                  num_resolved: '{{ .Alerts.Resolved | len }}'
+                client: 'Homelab Kubernetes Cluster'
+                client_url: 'https://grafana.${CLUSTER_DOMAIN}'
+                severity: 'critical'
+
+          # AlertManager UI only (no external notification)
+          - name: 'alertmanager-ui'
+
+        templates:
+          - '/etc/alertmanager/config/*.tmpl'
 
     kubeApiServer:
       enabled: true

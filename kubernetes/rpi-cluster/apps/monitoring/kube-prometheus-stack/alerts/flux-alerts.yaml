@@ -1,0 +1,102 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: flux-alerts
+  namespace: monitoring
+  labels:
+    app: kube-prometheus-stack
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: flux.rules
+      interval: 1m
+      rules:
+        # Flux Kustomization Failed
+        - alert: FluxKustomizationReconciliationFailed
+          expr: |
+            gotk_reconcile_condition{kind="Kustomization",type="Ready",status="False"} == 1
+          for: 5m
+          labels:
+            severity: critical
+            component: flux
+          annotations:
+            summary: "Flux Kustomization reconciliation failed"
+            description: |
+              Kustomization {{ $labels.exported_namespace }}/{{ $labels.name }} reconciliation has been failing for 5 minutes.
+              Current status: {{ $labels.status }}
+              Check with: kubectl describe kustomization {{ $labels.name }} -n {{ $labels.exported_namespace }}
+
+        # Flux HelmRelease Failed
+        - alert: FluxHelmReleaseReconciliationFailed
+          expr: |
+            gotk_reconcile_condition{kind="HelmRelease",type="Ready",status="False"} == 1
+          for: 5m
+          labels:
+            severity: critical
+            component: flux
+          annotations:
+            summary: "Flux HelmRelease reconciliation failed"
+            description: |
+              HelmRelease {{ $labels.exported_namespace }}/{{ $labels.name }} reconciliation has been failing for 5 minutes.
+              Current status: {{ $labels.status }}
+              Check with: kubectl describe helmrelease {{ $labels.name }} -n {{ $labels.exported_namespace }}
+
+        # Flux GitRepository Sync Failed
+        - alert: FluxGitRepositorySyncFailed
+          expr: |
+            gotk_reconcile_condition{kind="GitRepository",type="Ready",status="False"} == 1
+          for: 5m
+          labels:
+            severity: critical
+            component: flux
+          annotations:
+            summary: "Flux GitRepository sync failed"
+            description: |
+              GitRepository {{ $labels.exported_namespace }}/{{ $labels.name }} sync has been failing for 5 minutes.
+              This means Flux cannot fetch updates from Git.
+              Check with: kubectl describe gitrepository {{ $labels.name }} -n {{ $labels.exported_namespace }}
+
+        # Flux Kustomization Suspended
+        - alert: FluxKustomizationSuspended
+          expr: |
+            gotk_suspend_status{kind="Kustomization"} == 1
+          for: 10m
+          labels:
+            severity: warning
+            component: flux
+          annotations:
+            summary: "Flux Kustomization is suspended"
+            description: |
+              Kustomization {{ $labels.exported_namespace }}/{{ $labels.name }} has been suspended.
+              This means no automatic reconciliation is happening.
+              Resume with: flux resume kustomization {{ $labels.name }} -n {{ $labels.exported_namespace }}
+
+        # Flux HelmRelease Suspended
+        - alert: FluxHelmReleaseSuspended
+          expr: |
+            gotk_suspend_status{kind="HelmRelease"} == 1
+          for: 10m
+          labels:
+            severity: warning
+            component: flux
+          annotations:
+            summary: "Flux HelmRelease is suspended"
+            description: |
+              HelmRelease {{ $labels.exported_namespace }}/{{ $labels.name }} has been suspended.
+              Resume with: flux resume helmrelease {{ $labels.name }} -n {{ $labels.exported_namespace }}
+
+        # Flux Reconciliation Duration High
+        - alert: FluxReconciliationDurationHigh
+          expr: |
+            histogram_quantile(0.95, sum(rate(gotk_reconcile_duration_seconds_bucket[5m])) by (le, kind, name, exported_namespace)) > 300
+          for: 10m
+          labels:
+            severity: warning
+            component: flux
+          annotations:
+            summary: "Flux reconciliation taking too long"
+            description: |
+              {{ $labels.kind }} {{ $labels.exported_namespace }}/{{ $labels.name }} reconciliation is taking more than 5 minutes (p95).
+              Current duration: {{ $value | humanizeDuration }}
+              This may indicate performance issues or large resources.

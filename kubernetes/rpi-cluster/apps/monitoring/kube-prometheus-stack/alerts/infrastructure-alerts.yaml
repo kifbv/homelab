@@ -1,0 +1,189 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: infrastructure-alerts
+  namespace: monitoring
+  labels:
+    app: kube-prometheus-stack
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: infrastructure.rules
+      interval: 1m
+      rules:
+        # Node Not Ready
+        - alert: KubernetesNodeNotReady
+          expr: |
+            kube_node_status_condition{condition="Ready",status="true"} == 0
+          for: 5m
+          labels:
+            severity: critical
+            component: infrastructure
+          annotations:
+            summary: "Kubernetes node is not ready"
+            description: |
+              Node {{ $labels.node }} has been NotReady for 5 minutes.
+              Check node status: kubectl describe node {{ $labels.node }}
+              Check kubelet logs on the node.
+
+        # Node Memory Pressure
+        - alert: KubernetesNodeMemoryPressure
+          expr: |
+            kube_node_status_condition{condition="MemoryPressure",status="true"} == 1
+          for: 5m
+          labels:
+            severity: warning
+            component: infrastructure
+          annotations:
+            summary: "Kubernetes node has memory pressure"
+            description: |
+              Node {{ $labels.node }} is experiencing memory pressure.
+              This may cause pod evictions.
+              Check node resources: kubectl top node {{ $labels.node }}
+
+        # Node Disk Pressure
+        - alert: KubernetesNodeDiskPressure
+          expr: |
+            kube_node_status_condition{condition="DiskPressure",status="true"} == 1
+          for: 5m
+          labels:
+            severity: warning
+            component: infrastructure
+          annotations:
+            summary: "Kubernetes node has disk pressure"
+            description: |
+              Node {{ $labels.node }} is experiencing disk pressure.
+              Check disk usage on the node.
+
+        # Pod CrashLooping
+        - alert: KubernetesPodCrashLooping
+          expr: |
+            rate(kube_pod_container_status_restarts_total[15m]) > 0
+          for: 5m
+          labels:
+            severity: warning
+            component: infrastructure
+          annotations:
+            summary: "Pod is crash looping"
+            description: |
+              Pod {{ $labels.namespace }}/{{ $labels.pod }} container {{ $labels.container }} is crash looping.
+              Restart count in last 15m: {{ $value }}
+              Check pod logs: kubectl logs -n {{ $labels.namespace }} {{ $labels.pod }} -c {{ $labels.container }}
+              Check pod events: kubectl describe pod -n {{ $labels.namespace }} {{ $labels.pod }}
+
+        # Pod Not Ready for Extended Period
+        - alert: KubernetesPodNotReady
+          expr: |
+            kube_pod_status_phase{phase!~"Succeeded|Running"} == 1
+          for: 15m
+          labels:
+            severity: warning
+            component: infrastructure
+          annotations:
+            summary: "Pod is not ready"
+            description: |
+              Pod {{ $labels.namespace }}/{{ $labels.pod }} has been in {{ $labels.phase }} phase for 15 minutes.
+              Check pod status: kubectl describe pod -n {{ $labels.namespace }} {{ $labels.pod }}
+
+        # High Pod Memory Usage
+        - alert: KubernetesPodMemoryUsageHigh
+          expr: |
+            (container_memory_working_set_bytes / container_spec_memory_limit_bytes) * 100 > 90
+          for: 5m
+          labels:
+            severity: warning
+            component: infrastructure
+          annotations:
+            summary: "Pod memory usage is high"
+            description: |
+              Container {{ $labels.container }} in pod {{ $labels.namespace }}/{{ $labels.pod }} is using {{ $value | humanizePercentage }} of memory limit.
+              Current usage: {{ with printf "container_memory_working_set_bytes{pod='%s',container='%s',namespace='%s'}" .Labels.pod .Labels.container .Labels.namespace | query }}{{ . | first | value | humanize1024 }}B{{ end }}
+              Limit: {{ with printf "container_spec_memory_limit_bytes{pod='%s',container='%s',namespace='%s'}" .Labels.pod .Labels.container .Labels.namespace | query }}{{ . | first | value | humanize1024 }}B{{ end }}
+
+        # High Pod CPU Usage
+        - alert: KubernetesPodCPUUsageHigh
+          expr: |
+            (rate(container_cpu_usage_seconds_total[5m]) / container_spec_cpu_quota * 100000) > 90
+          for: 10m
+          labels:
+            severity: warning
+            component: infrastructure
+          annotations:
+            summary: "Pod CPU usage is high"
+            description: |
+              Container {{ $labels.container }} in pod {{ $labels.namespace }}/{{ $labels.pod }} is using {{ $value | humanizePercentage }} of CPU limit for 10 minutes.
+              This may cause throttling.
+
+        # Deployment Replica Mismatch
+        - alert: KubernetesDeploymentReplicasMismatch
+          expr: |
+            kube_deployment_status_replicas_available != kube_deployment_spec_replicas
+          for: 15m
+          labels:
+            severity: warning
+            component: infrastructure
+          annotations:
+            summary: "Deployment has replica mismatch"
+            description: |
+              Deployment {{ $labels.namespace }}/{{ $labels.deployment }} has {{ with printf "kube_deployment_status_replicas_available{deployment='%s',namespace='%s'}" .Labels.deployment .Labels.namespace | query }}{{ . | first | value }}{{ end }} available replicas but expects {{ with printf "kube_deployment_spec_replicas{deployment='%s',namespace='%s'}" .Labels.deployment .Labels.namespace | query }}{{ . | first | value }}{{ end }}.
+              Check deployment status: kubectl describe deployment -n {{ $labels.namespace }} {{ $labels.deployment }}
+
+        # StatefulSet Replica Mismatch
+        - alert: KubernetesStatefulSetReplicasMismatch
+          expr: |
+            kube_statefulset_status_replicas_ready != kube_statefulset_replicas
+          for: 15m
+          labels:
+            severity: warning
+            component: infrastructure
+          annotations:
+            summary: "StatefulSet has replica mismatch"
+            description: |
+              StatefulSet {{ $labels.namespace }}/{{ $labels.statefulset }} has {{ with printf "kube_statefulset_status_replicas_ready{statefulset='%s',namespace='%s'}" .Labels.statefulset .Labels.namespace | query }}{{ . | first | value }}{{ end }} ready replicas but expects {{ with printf "kube_statefulset_replicas{statefulset='%s',namespace='%s'}" .Labels.statefulset .Labels.namespace | query }}{{ . | first | value }}{{ end }}.
+              Check statefulset status: kubectl describe statefulset -n {{ $labels.namespace }} {{ $labels.statefulset }}
+
+        # Container Waiting Too Long
+        - alert: KubernetesContainerWaitingTooLong
+          expr: |
+            kube_pod_container_status_waiting_reason > 0
+          for: 10m
+          labels:
+            severity: warning
+            component: infrastructure
+          annotations:
+            summary: "Container is waiting too long"
+            description: |
+              Container {{ $labels.container }} in pod {{ $labels.namespace }}/{{ $labels.pod }} has been waiting for 10 minutes.
+              Reason: {{ $labels.reason }}
+              Check pod events: kubectl describe pod -n {{ $labels.namespace }} {{ $labels.pod }}
+
+        # Job Failed
+        - alert: KubernetesJobFailed
+          expr: |
+            kube_job_status_failed > 0
+          for: 5m
+          labels:
+            severity: warning
+            component: infrastructure
+          annotations:
+            summary: "Kubernetes Job has failed"
+            description: |
+              Job {{ $labels.namespace }}/{{ $labels.job_name }} has failed.
+              Check job status: kubectl describe job -n {{ $labels.namespace }} {{ $labels.job_name }}
+              Check pod logs: kubectl logs -n {{ $labels.namespace }} -l job-name={{ $labels.job_name }}
+
+        # Cilium Agent Not Ready
+        - alert: CiliumAgentNotReady
+          expr: |
+            cilium_agent_bootstrap_seconds == 0
+          for: 5m
+          labels:
+            severity: critical
+            component: infrastructure
+          annotations:
+            summary: "Cilium agent is not ready"
+            description: |
+              Cilium agent on node {{ $labels.node }} is not ready.
+              This affects networking for all pods on this node.
+              Check Cilium status: kubectl exec -n kube-system ds/cilium -- cilium-dbg status
