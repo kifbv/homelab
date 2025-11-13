@@ -1,0 +1,14 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: registry-htpasswd
+  namespace: registry
+type: Opaque
+stringData:
+  # HTTP Basic Auth credentials for Docker Registry
+  # Generated with: python3 -c "import crypt; print('user:' + crypt.crypt('password', crypt.METHOD_SHA512))"
+  # Format: username:hashed_password (one per line)
+  htpasswd: |
+    n8n:$6$n0QQjeC2o3lj8KEh$1udur9oTBMHyH0GY6AbpVoTmSSNquje7KnWC5dEWJe7LgcFPslOJuxn.m3P0lbv7h9kZWFREHq2mGTgveLtx4.
+    admin:$6$byOHX4XwZbQCFlfW$MeSrKltqc2hOowpzyAR2Pvn/v3HDgITxnnZn5LD8gwADqTU8cLA.VjdYkNuIKxiWLsH4FRAF3tDXNX136jP/q.

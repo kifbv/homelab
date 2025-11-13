@@ -1,0 +1,102 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: docker-registry
+  namespace: registry
+spec:
+  chart:
+    spec:
+      chart: docker-registry
+      version: 2.2.x
+      sourceRef:
+        kind: HelmRepository
+        name: twuni
+        namespace: flux-system
+  interval: 1h
+  values:
+    # Registry image configuration
+    image:
+      repository: docker.io/registry
+      tag: 2.8.3
+      pullPolicy: IfNotPresent
+
+    # Storage configuration - use Rook-Ceph
+    persistence:
+      enabled: true
+      storageClass: rook-ceph-block
+      size: 10Gi
+      accessMode: ReadWriteOnce
+
+    # Service configuration - ClusterIP only (internal access)
+    service:
+      type: ClusterIP
+      port: 5000
+      annotations: {}
+
+    # Resource limits for Raspberry Pi
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+    # Registry configuration
+    configData:
+      version: 0.1
+      log:
+        fields:
+          service: registry
+        level: info
+      storage:
+        cache:
+          blobdescriptor: inmemory
+        filesystem:
+          rootdirectory: /var/lib/registry
+      http:
+        addr: :5000
+        headers:
+          X-Content-Type-Options: [nosniff]
+        debug:
+          addr: :5001
+          prometheus:
+            enabled: true
+            path: /metrics
+      health:
+        storagedriver:
+          enabled: true
+          interval: 10s
+          threshold: 3
+      # Authentication via htpasswd
+      auth:
+        htpasswd:
+          realm: Registry Realm
+          path: /auth/htpasswd
+
+    # Security configuration
+    securityContext:
+      enabled: true
+      runAsUser: 1000
+      fsGroup: 1000
+
+    # Mount htpasswd secret
+    extraVolumeMounts:
+      - name: auth
+        mountPath: /auth
+        readOnly: true
+
+    extraVolumes:
+      - name: auth
+        secret:
+          secretName: registry-htpasswd
+          items:
+            - key: htpasswd
+              path: htpasswd
+
+    # Pod annotations for Prometheus scraping
+    podAnnotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "5001"
+      prometheus.io/path: "/metrics"
