@@ -1,0 +1,138 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: postgres-alerts
+  namespace: monitoring
+  labels:
+    app: kube-prometheus-stack
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: postgres.rules
+      interval: 1m
+      rules:
+        # PostgreSQL Cluster Not Ready
+        - alert: PostgreSQLClusterNotReady
+          expr: |
+            cnpg_pg_cluster_status{phase!="Cluster in healthy state"} == 1
+          for: 5m
+          labels:
+            severity: critical
+            component: database
+          annotations:
+            summary: "PostgreSQL cluster is not ready"
+            description: |
+              CloudNativePG cluster {{ $labels.name }} in namespace {{ $labels.namespace }} is not in healthy state.
+              Current phase: {{ $labels.phase }}
+              Check cluster status: kubectl get cluster {{ $labels.name }} -n {{ $labels.namespace }}
+              Check pod logs: kubectl logs -n {{ $labels.namespace }} -l cnpg.io/cluster={{ $labels.name }}
+
+        # PostgreSQL Instance Down
+        - alert: PostgreSQLInstanceDown
+          expr: |
+            cnpg_pg_replication_streaming_lag_seconds > 30
+          for: 5m
+          labels:
+            severity: critical
+            component: database
+          annotations:
+            summary: "PostgreSQL instance has high replication lag"
+            description: |
+              PostgreSQL instance {{ $labels.pod }} in cluster {{ $labels.cluster }} has replication lag of {{ $value | humanizeDuration }}.
+              This may indicate the standby is falling behind or disconnected.
+              Check replication status: kubectl cnpg status {{ $labels.cluster }} -n {{ $labels.namespace }}
+
+        # PostgreSQL Connection Pool Exhaustion Warning
+        - alert: PostgreSQLConnectionsHigh
+          expr: |
+            (cnpg_pg_stat_database_numbackends / cnpg_pg_settings_max_connections) * 100 > 80
+          for: 5m
+          labels:
+            severity: warning
+            component: database
+          annotations:
+            summary: "PostgreSQL connection pool utilization is high"
+            description: |
+              PostgreSQL instance {{ $labels.pod }} is using {{ $value | humanizePercentage }} of available connections.
+              Current connections: {{ with printf "cnpg_pg_stat_database_numbackends{pod='%s'}" .Labels.pod | query }}{{ . | first | value }}{{ end }}
+              Max connections: {{ with printf "cnpg_pg_settings_max_connections{pod='%s'}" .Labels.pod | query }}{{ . | first | value }}{{ end }}
+              Consider increasing max_connections or checking for connection leaks.
+
+        # PostgreSQL Database Size Growing Fast
+        - alert: PostgreSQLDatabaseSizeGrowingFast
+          expr: |
+            rate(cnpg_pg_stat_database_db_size[1h]) > 100000000
+          for: 30m
+          labels:
+            severity: warning
+            component: database
+          annotations:
+            summary: "PostgreSQL database is growing rapidly"
+            description: |
+              Database {{ $labels.datname }} in cluster {{ $labels.cluster }} is growing at {{ $value | humanize }}B/s.
+              This is over 100MB/hour growth rate.
+              Current size: {{ with printf "cnpg_pg_stat_database_db_size{datname='%s',cluster='%s'}" .Labels.datname .Labels.cluster | query }}{{ . | first | value | humanize1024 }}B{{ end }}
+              Check for unexpected data growth or missing cleanup jobs.
+
+        # PostgreSQL WAL Archive Failing
+        - alert: PostgreSQLWALArchiveFailing
+          expr: |
+            rate(cnpg_pg_stat_archiver_failed_count[5m]) > 0
+          for: 10m
+          labels:
+            severity: warning
+            component: database
+          annotations:
+            summary: "PostgreSQL WAL archiving is failing"
+            description: |
+              PostgreSQL instance {{ $labels.pod }} has failing WAL archive attempts.
+              Failed archives in last 5 minutes: {{ $value }}
+              This may affect backup consistency and point-in-time recovery.
+              Check archiver status and storage availability.
+
+        # PostgreSQL Too Many Dead Tuples
+        - alert: PostgreSQLTooManyDeadTuples
+          expr: |
+            (cnpg_pg_stat_user_tables_n_dead_tup / (cnpg_pg_stat_user_tables_n_live_tup + cnpg_pg_stat_user_tables_n_dead_tup)) * 100 > 20
+          for: 30m
+          labels:
+            severity: warning
+            component: database
+          annotations:
+            summary: "PostgreSQL table has too many dead tuples"
+            description: |
+              Table {{ $labels.schemaname }}.{{ $labels.relname }} has {{ $value | humanizePercentage }} dead tuples.
+              Dead tuples: {{ with printf "cnpg_pg_stat_user_tables_n_dead_tup{relname='%s'}" .Labels.relname | query }}{{ . | first | value }}{{ end }}
+              Live tuples: {{ with printf "cnpg_pg_stat_user_tables_n_live_tup{relname='%s'}" .Labels.relname | query }}{{ . | first | value }}{{ end }}
+              Consider running VACUUM or checking autovacuum settings.
+
+        # PostgreSQL Replication Slot Lag
+        - alert: PostgreSQLReplicationSlotLag
+          expr: |
+            cnpg_pg_replication_slots_wal_status == 1
+          for: 10m
+          labels:
+            severity: warning
+            component: database
+          annotations:
+            summary: "PostgreSQL replication slot has WAL retention issues"
+            description: |
+              Replication slot {{ $labels.slot_name }} is lagging.
+              This may cause WAL files to accumulate and fill up storage.
+              Check replication slot: kubectl cnpg status {{ $labels.cluster }} -n {{ $labels.namespace }}
+
+        # CloudNativePG Operator Not Ready
+        - alert: CloudNativePGOperatorDown
+          expr: |
+            kube_deployment_status_replicas_available{namespace="database",deployment="cloudnative-pg-operator"} == 0
+          for: 5m
+          labels:
+            severity: critical
+            component: database
+          annotations:
+            summary: "CloudNativePG operator is not available"
+            description: |
+              CloudNativePG operator has no available replicas.
+              This means database operations cannot be managed.
+              Check operator logs: kubectl logs -n database deploy/cloudnative-pg-operator
