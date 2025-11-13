@@ -264,6 +264,7 @@ spec:
   values:
     replicaCount: 2  # High availability
 
+    ###Question: Base64-encoded does not sound very secure, shouldn't these be references to SOPS-encrypted k8s secrets? This is what you seem to suggest below in the Implementation Roadmap (Phase 1, Step 2)
     tunnelSecrets:
       # Base64-encoded tunnel credentials from Cloudflare
       base64EncodedConfigJsonFile: ${CLOUDFLARE_TUNNEL_CREDENTIALS}
@@ -342,6 +343,7 @@ spec:
     # External access URL
     config:
       generic:
+        ###Question: is there a way to use secrets for the timezone, WEBHOOK_URL and N8N_EDITOR_BASE_URL? even is the site will be public i'd prefer not to have these informations in clear in my public github repo. For instance, is it possible to have only the leftmost part of the url in the config files and transform it into the full url with a PrefixSuffixTransformer kustomization? Same question for the n8n generated manifests.
         timezone: Europe/Bucharest
         WEBHOOK_URL: https://n8n.example.com
         N8N_EDITOR_BASE_URL: https://n8n.example.com
@@ -426,7 +428,7 @@ apps/dynamic/
 2. **AI Agent Nodes**: Generate webapp code (your custom implementation)
 3. **Code Node**: Generate Kubernetes manifests (YAML)
 4. **Git Node**: Commit and push to repository
-5. **HTTP Request Node** (Optional): Notify Flux to reconcile immediately
+5. **HTTP Request Node**: Notify Flux to reconcile immediately
 
 **Example n8n Workflow Structure:**
 
@@ -443,7 +445,7 @@ apps/dynamic/
        ↓
 [Git Node: Commit and Push]
        ↓
-[HTTP Request: Trigger Flux Reconciliation] (optional)
+[HTTP Request: Trigger Flux Reconciliation]
        ↓
 [Webhook Response: Success]
 ```
@@ -656,8 +658,9 @@ resources:
 - Applies manifests to cluster
 - Cloudflare Tunnel automatically routes new hostname
 
-**Immediate Reconciliation (Optional):**
+**Immediate Reconciliation:**
 
+###Question: is Flux notification controller already exposed? i.e. can we POST to that url?
 n8n can trigger immediate reconciliation via Flux API:
 
 ```javascript
@@ -1094,7 +1097,7 @@ kubectl annotate kustomization cluster-apps \
    8. **Code Node**: Update parent kustomization.yaml
    9. **Git Commit Node**: Commit changes
    10. **Git Push Node**: Push to main branch
-   11. **HTTP Request Node** (optional): Trigger Flux reconciliation
+   11. **HTTP Request Node**: Trigger Flux reconciliation
    12. **Webhook Response**: Return success with app URL
 
 3. **Create Directory Structure for Dynamic Apps:**
@@ -1367,12 +1370,12 @@ securityContext:
 
 ### Questions to Answer Before Implementation
 
-1. **Domain**: What domain will be used? (must be on Cloudflare)
-2. **Subdomains**: Naming convention for dynamic apps? (e.g., `*.apps.example.com`)
-3. **Authentication**: Should all apps require authentication, or only specific ones?
-4. **Rate Limits**: What rate limits are appropriate for webhooks?
-5. **Monitoring**: What metrics and alerts are critical?
-6. **Backup Strategy**: Where should PostgreSQL backups be stored? (S3, Ceph, etc.)
+1. **Domain**: What domain will be used? (must be on Cloudflare) => i think i can register my existing domain 'k8s-lab.dev' registered with Porkbun. If not, i will get a new domain from Cloudflare.
+2. **Subdomains**: Naming convention for dynamic apps? (e.g., `*.apps.example.com`) => yes, `*.apps` is a perfect prefix for app subdomains.
+3. **Authentication**: Should all apps require authentication, or only specific ones? => some dynamic apps may require authentification.
+4. **Rate Limits**: What rate limits are appropriate for webhooks? => whatever rate is considered human activity is appropriate. Access should also only be allowed from specific countries (Cloudflare setting i suppose).
+5. **Monitoring**: What metrics and alerts are critical? => not sure at the moment, but we keep a note about settings these up. Suggest the most important ones.
+6. **Backup Strategy**: Where should PostgreSQL backups be stored? (S3, Ceph, etc.) => we will probably do offsite backups to s3.
 
 ### Future Enhancements
 
