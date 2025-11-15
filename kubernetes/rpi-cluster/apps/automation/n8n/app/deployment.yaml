@@ -16,6 +16,8 @@ spec:
       labels:
         app: n8n
     spec:
+      imagePullSecrets:
+        - name: dockerhub-credentials
       containers:
         - name: n8n
           image: docker.io/n8nio/n8n:latest
