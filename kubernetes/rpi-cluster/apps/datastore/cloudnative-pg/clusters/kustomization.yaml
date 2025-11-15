@@ -4,5 +4,7 @@ kind: Kustomization
 resources:
   - credentials.sops.yaml
   - credentials-linkding.sops.yaml
+  - credentials-n8n.sops.yaml
   - postgres-example.yaml
   - database-linkding.yaml
+  - database-n8n.yaml
