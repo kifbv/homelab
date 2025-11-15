@@ -17,9 +17,11 @@ spec:
   interval: 30m
   values:
     image:
-      repository: ghcr.io/emberstack/kubernetes-reflector
+      repository: docker.io/emberstack/kubernetes-reflector
       tag: 7.1.288
       pullPolicy: IfNotPresent
+    imagePullSecrets:
+      - name: dockerhub-credentials
     rbac:
       enabled: true
     serviceAccount:
