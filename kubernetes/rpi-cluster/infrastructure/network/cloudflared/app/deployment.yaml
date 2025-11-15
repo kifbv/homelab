@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
         - name: cloudflared
-          image: docker.io/cloudflare/cloudflared:2025.11.0
+          image: docker.io/cloudflare/cloudflared:2025.9.1
           args:
             - tunnel
             - --no-autoupdate
