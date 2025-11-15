@@ -41,6 +41,11 @@ spec:
         login: true
         passwordSecret:
           name: linkding-postgres-credentials
+      - name: n8n
+        ensure: present
+        login: true
+        passwordSecret:
+          name: n8n-db-credentials
 
   # PostgreSQL configuration
   postgresql:
