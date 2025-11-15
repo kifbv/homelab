@@ -29,7 +29,7 @@ spec:
             - --config
             - /etc/cloudflared/config.yaml
             - --credentials-file
-            - /etc/cloudflared/credentials.json
+            - /etc/cloudflared/creds/credentials.json
             - run
             - homelab-rpi-cluster-local
           volumeMounts:
@@ -37,8 +37,7 @@ spec:
               mountPath: /etc/cloudflared
               readOnly: true
             - name: credentials
-              mountPath: /etc/cloudflared/credentials.json
-              subPath: credentials.json
+              mountPath: /etc/cloudflared/creds
               readOnly: true
           resources:
             requests:
