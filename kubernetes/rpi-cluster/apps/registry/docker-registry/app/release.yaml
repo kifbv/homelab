@@ -43,10 +43,6 @@ spec:
         cpu: 500m
         memory: 512Mi
 
-    # Authentication - use chart's built-in secrets mechanism
-    secrets:
-      htpasswd: "registry-htpasswd"
-
     # Registry configuration
     configData:
       version: 0.1
@@ -61,6 +57,10 @@ spec:
         addr: :5000
         headers:
           X-Content-Type-Options: [nosniff]
+      auth:
+        htpasswd:
+          realm: "Registry Realm"
+          path: /auth/htpasswd
       health:
         storagedriver:
           enabled: true
@@ -71,6 +71,20 @@ spec:
     metrics:
       enabled: true
       port: 5001
+
+    # Mount htpasswd secret
+    extraVolumeMounts:
+      - name: auth
+        mountPath: /auth
+        readOnly: true
+
+    extraVolumes:
+      - name: auth
+        secret:
+          secretName: registry-htpasswd
+          items:
+            - key: htpasswd
+              path: htpasswd
 
     # Security configuration
     securityContext:
