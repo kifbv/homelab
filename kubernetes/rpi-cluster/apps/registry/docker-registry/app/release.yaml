@@ -43,6 +43,10 @@ spec:
         cpu: 500m
         memory: 512Mi
 
+    # Authentication - use chart's built-in secrets mechanism
+    secrets:
+      htpasswd: "registry-htpasswd"
+
     # Registry configuration
     configData:
       version: 0.1
@@ -53,47 +57,26 @@ spec:
       storage:
         cache:
           blobdescriptor: inmemory
-        filesystem:
-          rootdirectory: /var/lib/registry
       http:
         addr: :5000
         headers:
           X-Content-Type-Options: [nosniff]
-        debug:
-          addr: :5001
-          prometheus:
-            enabled: true
-            path: /metrics
       health:
         storagedriver:
           enabled: true
           interval: 10s
           threshold: 3
-      # Authentication via htpasswd
-      auth:
-        htpasswd:
-          realm: Registry Realm
-          path: /auth/htpasswd
+
+    # Enable Prometheus metrics
+    metrics:
+      enabled: true
+      port: 5001
 
     # Security configuration
     securityContext:
       enabled: true
       runAsUser: 1000
       fsGroup: 1000
-
-    # Mount htpasswd secret
-    extraVolumeMounts:
-      - name: auth
-        mountPath: /auth
-        readOnly: true
-
-    extraVolumes:
-      - name: auth
-        secret:
-          secretName: registry-htpasswd
-          items:
-            - key: htpasswd
-              path: htpasswd
 
     # Pod annotations for Prometheus scraping
     podAnnotations:
