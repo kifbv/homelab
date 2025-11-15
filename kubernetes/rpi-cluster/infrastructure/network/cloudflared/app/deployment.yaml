@@ -17,7 +17,7 @@ spec:
         app: cloudflared
       annotations:
         prometheus.io/scrape: "true"
-        prometheus.io/port: "2000"
+        prometheus.io/port: "20241"
         prometheus.io/path: "/metrics"
     spec:
       containers:
@@ -45,7 +45,7 @@ spec:
           livenessProbe:
             httpGet:
               path: /ready
-              port: 2000
+              port: 20241
             initialDelaySeconds: 10
             periodSeconds: 10
           securityContext:
