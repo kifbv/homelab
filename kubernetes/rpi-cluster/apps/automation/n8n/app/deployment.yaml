@@ -16,8 +16,13 @@ spec:
       labels:
         app: n8n
     spec:
+      enableServiceLinks: false
       imagePullSecrets:
         - name: dockerhub-credentials
+      securityContext:
+        fsGroup: 1000
+        runAsUser: 1000
+        runAsNonRoot: true
       containers:
         - name: n8n
           image: docker.io/n8nio/n8n:latest
