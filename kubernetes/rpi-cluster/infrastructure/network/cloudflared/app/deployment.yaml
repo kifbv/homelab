@@ -26,6 +26,8 @@ spec:
           args:
             - tunnel
             - --no-autoupdate
+            - --config
+            - /etc/cloudflared/config.yaml
             - run
             - --token
             - $(TUNNEL_TOKEN)
@@ -35,6 +37,10 @@ spec:
                 secretKeyRef:
                   name: cloudflared-token
                   key: TUNNEL_TOKEN
+          volumeMounts:
+            - name: config
+              mountPath: /etc/cloudflared
+              readOnly: true
           resources:
             requests:
               cpu: 50m
@@ -57,6 +63,10 @@ spec:
               drop:
                 - ALL
             readOnlyRootFilesystem: true
+      volumes:
+        - name: config
+          configMap:
+            name: cloudflared-config
       securityContext:
         fsGroup: 65532
         runAsNonRoot: true

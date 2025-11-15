@@ -1,0 +1,20 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflared-config
+  namespace: network
+data:
+  config.yaml: |
+    # Tunnel routes configuration
+    ingress:
+      # n8n automation platform
+      - hostname: n8n.k8s-lab.dev
+        service: http://n8n.automation.svc.cluster.local:5678
+
+      # Test route (homepage)
+      - hostname: test.k8s-lab.dev
+        service: http://homepage.home.svc.cluster.local:3000
+
+      # Catch-all rule (required)
+      - service: http_status:404
