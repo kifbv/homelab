@@ -28,18 +28,17 @@ spec:
             - --no-autoupdate
             - --config
             - /etc/cloudflared/config.yaml
+            - --credentials-file
+            - /etc/cloudflared/credentials.json
             - run
-            - --token
-            - $(TUNNEL_TOKEN)
-          env:
-            - name: TUNNEL_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: cloudflared-token
-                  key: TUNNEL_TOKEN
+            - homelab-rpi-cluster-local
           volumeMounts:
             - name: config
               mountPath: /etc/cloudflared
+              readOnly: true
+            - name: credentials
+              mountPath: /etc/cloudflared/credentials.json
+              subPath: credentials.json
               readOnly: true
           resources:
             requests:
@@ -67,6 +66,9 @@ spec:
         - name: config
           configMap:
             name: cloudflared-config
+        - name: credentials
+          secret:
+            secretName: cloudflared-credentials
       securityContext:
         fsGroup: 65532
         runAsNonRoot: true
