@@ -8,18 +8,16 @@ spec:
   chart:
     spec:
       chart: external-dns
-      version: 9.x.x
+      version: 1.19.x
       sourceRef:
         kind: HelmRepository
-        name: bitnami
+        name: external-dns
         namespace: flux-system
       interval: 30m
   interval: 30m
   values:
-    provider: cloudflare
-
-    imagePullSecrets:
-      - name: dockerhub-credentials
+    provider:
+      name: cloudflare
 
     env:
       - name: CF_API_TOKEN
