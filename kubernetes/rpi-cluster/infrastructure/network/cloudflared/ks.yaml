@@ -12,6 +12,10 @@ spec:
     kind: GitRepository
     name: flux-system
   targetNamespace: network
+  decryption:
+    provider: sops
+    secretRef:
+      name: flux-sops
   postBuild:
     substituteFrom:
       - kind: Secret
