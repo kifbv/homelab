@@ -1,0 +1,49 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: external-dns
+  namespace: network
+spec:
+  chart:
+    spec:
+      chart: external-dns
+      version: 8.x.x
+      sourceRef:
+        kind: HelmRepository
+        name: bitnami
+        namespace: flux-system
+      interval: 30m
+  interval: 30m
+  values:
+    provider: cloudflare
+
+    env:
+      - name: CF_API_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: cloudflare-api-token
+            key: CF_API_TOKEN
+
+    domainFilters:
+      - k8s-lab.dev
+
+    policy: sync
+
+    txtOwnerId: homelab-rpi-cluster
+
+    sources:
+      - service
+      - ingress
+
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
+
+    logLevel: info
+
+    interval: 1m
