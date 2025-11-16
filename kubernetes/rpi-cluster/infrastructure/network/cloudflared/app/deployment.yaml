@@ -34,10 +34,15 @@ spec:
             - homelab-rpi-cluster-local
           volumeMounts:
             - name: config
-              mountPath: /etc/cloudflared
+              mountPath: /etc/cloudflared/config.yaml
+              subPath: config.yaml
               readOnly: true
             - name: credentials
               mountPath: /etc/cloudflared/creds
+              readOnly: true
+            - name: credentials
+              mountPath: /etc/cloudflared/cert.pem
+              subPath: cert.pem
               readOnly: true
           resources:
             requests:
