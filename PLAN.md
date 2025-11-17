@@ -138,44 +138,54 @@ This document outlines the implementation plan for building an n8n-based automat
 
 ## Phase 2: Container Build Strategy (Week 2)
 
-### 2.1 Research Buildah on ARM64/Raspberry Pi
+### 2.1 Research Buildah on ARM64/Raspberry Pi ✅ COMPLETED
 **Goal**: Verify Buildah suitability for low-resource ARM builds
 
-- [ ] Research Buildah performance on Raspberry Pi 5 (8GB RAM)
-- [ ] Research Buildah memory requirements and optimization options
-- [ ] Compare with alternatives (Kaniko, img) for ARM64
-- [ ] Test basic build on ARM64 (if possible)
-- [ ] Document findings and recommendation
-- [ ] **Decision Point**: Proceed with Buildah or pivot to alternative
+**Decision**: **Use Kaniko instead of Buildah**
 
-**Research Questions**:
-- Does Buildah run efficiently on ARM64 with 8GB RAM?
-- What are typical build times for simple webapps?
-- Are there known issues with Buildah on Raspberry Pi?
-- Can Buildah run rootless in Kubernetes?
+**Key Insights**:
+- **Buildah complexity**: Requires storage driver config, user namespaces, capabilities
+- **Buildkit trade-off**: Fast but needs privileged mode even with user namespaces
+- **Kaniko winner**: Zero config, truly rootless, Kubernetes-native, simpler
+- **Performance acceptable**: Slower/more memory than Buildah, but fine for small webapp images
+- **Maintained**: Chainguard took over from Google
+
+- [x] Research Buildah performance on Raspberry Pi 5 (8GB RAM) - ✅ Yes, but complex setup
+- [x] Research Buildah memory requirements and optimization options - ✅ Low memory, but needs overlay storage
+- [x] Compare with alternatives (Kaniko, img) for ARM64 - ✅ Kaniko best for use case
+- [x] Document findings and recommendation - ✅ See `docs/buildah-research-findings.md`
+- [x] **Decision**: Proceed with **Kaniko** (simpler, more secure, good enough)
+
+**Research Answers**:
+- Buildah runs efficiently on ARM64, but setup is complex (storage, capabilities, user namespaces)
+- Build times: Buildah/Buildkit fast, Kaniko slower but acceptable for webapps
+- Known issues: Buildah rootless in Kubernetes has multiple GitHub issues
+- Kaniko is simpler and better suited for ephemeral builds in n8n workflows
 
 ---
 
-### 2.2 Deploy Buildah Infrastructure
-**Goal**: Enable n8n to build container images
+### 2.2 Deploy Kaniko Infrastructure
+**Goal**: Enable n8n to build container images using Kaniko
 
-**Option A: Buildah Pod Template** (Recommended for security)
-- [ ] Create Buildah container image with necessary tools (or use existing buildah:stable)
-- [ ] Configure pod template for builds (rootless, fuse-overlayfs storage)
-- [ ] Create ServiceAccount with required permissions
-- [ ] Configure resource limits (CPU, memory)
-- [ ] Test build with sample Dockerfile
+**Approach**: n8n creates ephemeral Kaniko pods via Kubernetes node
 
-**Option B: Buildah Sidecar in n8n Pod**
-- [ ] Add Buildah sidecar to n8n deployment
-- [ ] Configure shared workspace volume
-- [ ] Configure resource limits
+- [ ] Create ServiceAccount for Kaniko builds in dynamic-apps namespace
+- [ ] Create RBAC Role/RoleBinding for pod creation in dynamic-apps
+- [ ] Grant n8n ServiceAccount permission to create pods in dynamic-apps
+- [ ] Configure Kaniko pod template for n8n
+- [ ] Set resource limits (CPU: 1-2 cores, Memory: 2-4GB)
+- [ ] Test Kaniko build with sample Dockerfile
 
-**Files to create** (Option A):
-- `kubernetes/rpi-cluster/apps/automation/buildah/ks.yaml`
-- `kubernetes/rpi-cluster/apps/automation/buildah/app/serviceaccount.yaml`
-- `kubernetes/rpi-cluster/apps/automation/buildah/app/pod-template.yaml`
-- `kubernetes/rpi-cluster/apps/automation/buildah/app/rbac.yaml`
+**Files to create**:
+- `kubernetes/rpi-cluster/apps/dynamic/app/kaniko-serviceaccount.yaml`
+- `kubernetes/rpi-cluster/apps/dynamic/app/kaniko-rbac.yaml`
+- Update n8n ServiceAccount with cross-namespace permissions
+
+**Kaniko Benefits**:
+- No storage configuration needed
+- Truly rootless (no privileged mode)
+- Simple pod spec
+- Debug images available with shell
 
 ---
 
