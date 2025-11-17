@@ -86,19 +86,25 @@ This document outlines the implementation plan for building an n8n-based automat
 
 ---
 
-### 1.4 Variable Substitution for Secrets
+### 1.4 Variable Substitution for Secrets ✅ COMPLETED
 **Goal**: Remove hardcoded domains and configuration from manifests
 
-- [ ] Create or update `flux/settings/cluster-secrets.sops.yaml` with:
+**Key Insights**:
+- **Flux postBuild substitution**: Variables from cluster-secrets are substituted at reconciliation time
+- **Cloudflared already configured**: Already had `postBuild.substituteFrom` in place
+- **Restart requirement**: ConfigMap changes still require manual pod restart for cloudflared
+- **Reconciliation order matters**: Must reconcile cluster-settings before apps that use substitution
+
+- [x] Create or update `flux/settings/cluster-secrets.sops.yaml` with:
   - `CLUSTER_DOMAIN=k8s-lab.dev`
   - `CLUSTER_TIMEZONE=Europe/Bucharest`
   - `REGISTRY_URL=registry.k8s-lab.dev`
   - `APPS_SUBDOMAIN=apps.k8s-lab.dev`
-- [ ] Update n8n Kustomization with `postBuild.substituteFrom`
-- [ ] Update n8n deployment.yaml to use `${CLUSTER_DOMAIN}` variables
-- [ ] Update Cloudflared Kustomization with `postBuild.substituteFrom`
-- [ ] Update Cloudflared config.yaml to use variables
-- [ ] Test reconciliation and verify substitution works
+- [x] Update n8n Kustomization with `postBuild.substituteFrom`
+- [x] Update n8n deployment.yaml to use `${CLUSTER_DOMAIN}` variables
+- [x] Cloudflared Kustomization already had `postBuild.substituteFrom`
+- [x] Update Cloudflared config.yaml to use variables
+- [x] Test reconciliation and verify substitution works
 
 **Files to update**:
 - `kubernetes/rpi-cluster/flux/settings/cluster-secrets.sops.yaml`
