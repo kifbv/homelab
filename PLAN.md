@@ -2,6 +2,8 @@
 
 This document outlines the implementation plan for building an n8n-based automation system that creates webapps on demand and deploys them to the Kubernetes homelab cluster.
 
+**Status**: Phase 1 in progress - Flux webhook receiver deployed.
+
 ## Overview
 
 **Goal**: Enable on-demand webapp creation through an n8n workflow that:
