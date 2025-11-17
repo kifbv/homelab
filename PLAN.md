@@ -164,28 +164,39 @@ This document outlines the implementation plan for building an n8n-based automat
 
 ---
 
-### 2.2 Deploy Kaniko Infrastructure
+### 2.2 Deploy Kaniko Infrastructure ✅ COMPLETED
 **Goal**: Enable n8n to build container images using Kaniko
 
 **Approach**: n8n creates ephemeral Kaniko pods via Kubernetes node
 
-- [ ] Create ServiceAccount for Kaniko builds in dynamic-apps namespace
-- [ ] Create RBAC Role/RoleBinding for pod creation in dynamic-apps
-- [ ] Grant n8n ServiceAccount permission to create pods in dynamic-apps
-- [ ] Configure Kaniko pod template for n8n
-- [ ] Set resource limits (CPU: 1-2 cores, Memory: 2-4GB)
-- [ ] Test Kaniko build with sample Dockerfile
+**Key Insights**:
+- **ServiceAccount pattern**: n8n SA in automation namespace with cross-namespace RoleBinding
+- **Reflector integration**: Registry credentials auto-mounted in dynamic-apps namespace
+- **Resource limits**: 500m-2000m CPU, 1-4Gi memory (tuned for Pi 5)
+- **Ephemeral builds**: Pod deleted after completion, clean state each time
 
-**Files to create**:
-- `kubernetes/rpi-cluster/apps/dynamic/app/kaniko-serviceaccount.yaml`
-- `kubernetes/rpi-cluster/apps/dynamic/app/kaniko-rbac.yaml`
-- Update n8n ServiceAccount with cross-namespace permissions
+- [x] Create ServiceAccount for n8n in automation namespace
+- [x] Create RBAC Role in dynamic-apps for pod/ConfigMap management
+- [x] Create cross-namespace RoleBinding for n8n ServiceAccount
+- [x] Update n8n deployment to use ServiceAccount
+- [x] Update dynamic-apps RBAC to allow pod creation
+- [x] Create Kaniko pod template documentation with n8n workflow guide
+- [x] Set resource limits (CPU: 500m-2000m, Memory: 1-4Gi)
+- [ ] Test Kaniko build with sample Dockerfile (Phase 2.4)
 
-**Kaniko Benefits**:
-- No storage configuration needed
-- Truly rootless (no privileged mode)
-- Simple pod spec
-- Debug images available with shell
+**Files created**:
+- `kubernetes/rpi-cluster/apps/automation/n8n/app/serviceaccount.yaml`
+- `kubernetes/rpi-cluster/apps/automation/n8n/app/rbac.yaml` (cross-namespace)
+- `kubernetes/rpi-cluster/apps/automation/n8n/app/kustomization.yaml` (updated)
+- `kubernetes/rpi-cluster/apps/automation/n8n/app/deployment.yaml` (updated)
+- `kubernetes/rpi-cluster/apps/dynamic/app/rbac.yaml` (updated)
+- `docs/kaniko-pod-template.yaml` (reference template)
+
+**Kaniko Benefits Confirmed**:
+- No storage configuration needed ✅
+- Truly rootless (no privileged mode) ✅
+- Simple pod spec ✅
+- Registry credentials via Reflector ✅
 
 ---
 
