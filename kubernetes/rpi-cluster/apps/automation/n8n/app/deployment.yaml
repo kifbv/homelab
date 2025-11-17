@@ -16,6 +16,7 @@ spec:
       labels:
         app: n8n
     spec:
+      serviceAccountName: n8n
       enableServiceLinks: false
       imagePullSecrets:
         - name: dockerhub-credentials

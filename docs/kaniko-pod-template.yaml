@@ -1,0 +1,141 @@
+# Kaniko Pod Template for n8n Workflows
+# This is a reference template for creating Kaniko build pods from n8n
+#
+# Usage in n8n:
+# 1. Use the "Kubernetes" node with "Create" operation for "Pod"
+# 2. Use this template as base, substituting variables as needed
+# 3. Mount Dockerfile and context as ConfigMap or use git context
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kaniko-build-{{ APP_NAME }}-{{ BUILD_ID }}
+  namespace: dynamic-apps
+  labels:
+    app: {{ APP_NAME }}
+    build-id: "{{ BUILD_ID }}"
+    managed-by: n8n
+spec:
+  restartPolicy: Never
+  serviceAccountName: dynamic-apps
+  containers:
+    - name: kaniko
+      image: gcr.io/kaniko-project/executor:v1.23.2
+      args:
+        - --context=/workspace
+        - --dockerfile=/workspace/Dockerfile
+        - --destination=registry.k8s-lab.dev/dynamic-apps/{{ APP_NAME }}:{{ VERSION }}
+        - --cache=true
+        - --cache-repo=registry.k8s-lab.dev/dynamic-apps/cache
+        - --skip-tls-verify
+        # For debugging, add: --verbosity=debug
+      volumeMounts:
+        - name: workspace
+          mountPath: /workspace
+        - name: registry-credentials
+          mountPath: /kaniko/.docker
+          readOnly: true
+      resources:
+        requests:
+          cpu: 500m
+          memory: 1Gi
+        limits:
+          cpu: 2000m
+          memory: 4Gi
+  volumes:
+    # Workspace with Dockerfile and context
+    - name: workspace
+      configMap:
+        name: build-context-{{ APP_NAME }}-{{ BUILD_ID }}
+
+    # Registry credentials (automatically available via Reflector)
+    - name: registry-credentials
+      secret:
+        secretName: registry-credentials
+        items:
+          - key: .dockerconfigjson
+            path: config.json
+
+---
+# Alternative: Using Git context instead of ConfigMap
+# Replace the workspace volume with:
+#
+# volumes:
+#   - name: workspace
+#     emptyDir: {}
+#
+# And add an init container to clone the repo:
+#
+# initContainers:
+#   - name: git-clone
+#     image: alpine/git:latest
+#     command:
+#       - sh
+#       - -c
+#       - |
+#         git clone {{ GIT_REPO_URL }} /workspace
+#         cd /workspace
+#         git checkout {{ GIT_REF }}
+#     volumeMounts:
+#       - name: workspace
+#         mountPath: /workspace
+
+---
+# Example: Simple Node.js app Dockerfile that could be in the ConfigMap
+#
+# FROM node:20-alpine
+# WORKDIR /app
+# COPY package*.json ./
+# RUN npm ci --only=production
+# COPY . .
+# EXPOSE 3000
+# CMD ["node", "index.js"]
+
+---
+# n8n Workflow Steps:
+#
+# 1. Receive webhook with app configuration
+# 2. Generate unique build ID (e.g., timestamp or UUID)
+# 3. Create ConfigMap with Dockerfile and app files:
+#    - Name: build-context-{{ APP_NAME }}-{{ BUILD_ID }}
+#    - Data: { "Dockerfile": "...", "index.js": "...", "package.json": "..." }
+# 4. Create Kaniko Pod using this template
+# 5. Wait for pod completion (watch pod status)
+# 6. Read pod logs to get build output
+# 7. Clean up: Delete pod and ConfigMap
+# 8. Create Deployment, Service, and HTTPRoute for the app
+# 9. Send webhook response with app URL
+
+---
+# Resource Limits Explanation:
+#
+# Requests (guaranteed):
+#   - CPU: 500m (0.5 cores) - sufficient for most builds
+#   - Memory: 1Gi - handles small to medium images
+#
+# Limits (maximum):
+#   - CPU: 2000m (2 cores) - allows burst during intensive build steps
+#   - Memory: 4Gi - accommodates larger images with many layers
+#
+# For Raspberry Pi 5 (8GB RAM):
+#   - Can run 2-3 concurrent builds comfortably
+#   - Single build typically uses 1-2GB memory
+#   - Adjust limits if needed based on actual usage
+
+---
+# Security Notes:
+#
+# 1. --skip-tls-verify: Required because registry uses self-signed cert
+#    - Alternative: Mount CA certificate and use --ca-certificate
+#
+# 2. ServiceAccount: Uses dynamic-apps SA with imagePullSecrets
+#    - Registry credentials automatically mounted
+#
+# 3. Rootless: Kaniko runs as non-root by default
+#    - No privileged mode needed
+#    - Safe for multi-tenant cluster
+#
+# 4. Ephemeral: Pod is deleted after build
+#    - No persistent state
+#    - Clean environment for each build

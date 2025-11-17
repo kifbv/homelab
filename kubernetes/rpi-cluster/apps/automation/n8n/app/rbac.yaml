@@ -1,0 +1,38 @@
+---
+# Role in dynamic-apps namespace for n8n to create Kaniko build pods
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: n8n-builder
+  namespace: dynamic-apps
+rules:
+  # Allow creating and managing pods for Kaniko builds
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["create", "get", "list", "watch", "delete"]
+
+  # Allow reading pod logs (for build output)
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get", "list"]
+
+  # Allow creating ConfigMaps (for build context)
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["create", "get", "delete"]
+
+---
+# RoleBinding to grant n8n ServiceAccount the builder role in dynamic-apps
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: n8n-builder
+  namespace: dynamic-apps
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: n8n-builder
+subjects:
+  - kind: ServiceAccount
+    name: n8n
+    namespace: automation

@@ -5,10 +5,10 @@ metadata:
   name: dynamic-apps-manager
   namespace: dynamic-apps
 rules:
-  # Allow management of pods
+  # Allow management of pods (including create for Kaniko builds)
   - apiGroups: [""]
     resources: ["pods", "pods/log"]
-    verbs: ["get", "list", "watch"]
+    verbs: ["get", "list", "watch", "create", "delete"]
 
   # Allow management of services
   - apiGroups: [""]
