@@ -16,5 +16,9 @@ data:
       - hostname: test.k8s-lab.dev
         service: http://homepage.home.svc.cluster.local:3000
 
+      # Flux webhook receiver
+      - hostname: flux-webhook.k8s-lab.dev
+        service: http://notification-controller.flux-system.svc.cluster.local:9292
+
       # Catch-all rule (required)
       - service: http_status:404
