@@ -19,6 +19,10 @@ spec:
     provider: sops
     secretRef:
       name: flux-sops
+  postBuild:
+    substituteFrom:
+      - kind: Secret
+        name: cluster-secrets
   wait: true
   timeout: 5m
   retryInterval: 2m

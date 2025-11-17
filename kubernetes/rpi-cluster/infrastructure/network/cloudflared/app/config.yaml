@@ -9,19 +9,19 @@ data:
     # Tunnel routes configuration
     ingress:
       # n8n automation platform
-      - hostname: n8n.k8s-lab.dev
+      - hostname: n8n.${CLUSTER_DOMAIN}
         service: http://n8n.automation.svc.cluster.local:5678
 
       # Test route (homepage)
-      - hostname: test.k8s-lab.dev
+      - hostname: test.${CLUSTER_DOMAIN}
         service: http://homepage.home.svc.cluster.local:3000
 
       # Flux webhook receiver
-      - hostname: flux-webhook.k8s-lab.dev
+      - hostname: flux-webhook.${CLUSTER_DOMAIN}
         service: http://webhook-receiver.flux-system.svc.cluster.local:80
 
       # Docker Registry (private container registry)
-      - hostname: registry.k8s-lab.dev
+      - hostname: ${REGISTRY_URL}
         service: http://docker-registry.registry.svc.cluster.local:5000
 
       # Catch-all rule (required)

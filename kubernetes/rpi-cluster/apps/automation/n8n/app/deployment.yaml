@@ -65,15 +65,15 @@ spec:
                   name: n8n-config
                   key: N8N_ENCRYPTION_KEY
             - name: N8N_HOST
-              value: "n8n.k8s-lab.dev"
+              value: "n8n.${CLUSTER_DOMAIN}"
             - name: N8N_PROTOCOL
               value: "https"
             - name: WEBHOOK_URL
-              value: "https://n8n.k8s-lab.dev/"
+              value: "https://n8n.${CLUSTER_DOMAIN}/"
             - name: N8N_EDITOR_BASE_URL
-              value: "https://n8n.k8s-lab.dev/"
+              value: "https://n8n.${CLUSTER_DOMAIN}/"
             - name: GENERIC_TIMEZONE
-              value: "Europe/Bucharest"
+              value: "${CLUSTER_TIMEZONE}"
             - name: N8N_LOG_LEVEL
               value: "info"
           volumeMounts:
