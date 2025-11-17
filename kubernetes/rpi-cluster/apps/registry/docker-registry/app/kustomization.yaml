@@ -5,3 +5,4 @@ resources:
   - registry-auth.sops.yaml
   - registry-credentials.sops.yaml
   - release.yaml
+  - tunnel-service.yaml

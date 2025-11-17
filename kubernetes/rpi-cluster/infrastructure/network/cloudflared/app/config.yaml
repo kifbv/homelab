@@ -20,5 +20,9 @@ data:
       - hostname: flux-webhook.k8s-lab.dev
         service: http://webhook-receiver.flux-system.svc.cluster.local:80
 
+      # Docker Registry (private container registry)
+      - hostname: registry.k8s-lab.dev
+        service: http://docker-registry.registry.svc.cluster.local:5000
+
       # Catch-all rule (required)
       - service: http_status:404
