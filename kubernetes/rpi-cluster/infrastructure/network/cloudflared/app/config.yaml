@@ -24,5 +24,11 @@ data:
       - hostname: ${REGISTRY_URL}
         service: http://docker-registry.registry.svc.cluster.local:5000
 
+      # Dynamic apps wildcard route (routes to Cilium Gateway)
+      - hostname: "*.${APPS_SUBDOMAIN}"
+        service: https://192.168.5.250:443
+        originRequest:
+          noTLSVerify: true
+
       # Catch-all rule (required)
       - service: http_status:404

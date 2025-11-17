@@ -6,3 +6,4 @@ metadata:
   labels:
     app.kubernetes.io/managed-by: flux
     toolkit.fluxcd.io/tenant: dynamic-apps
+    networking.kubernetes.io/shared-gateway-access: "true"
