@@ -5,6 +5,8 @@ metadata:
   name: cloudflared
   namespace: flux-system
 spec:
+  dependsOn:
+    - name: cluster-settings
   interval: 1h
   path: ./kubernetes/rpi-cluster/infrastructure/network/cloudflared/app
   prune: true

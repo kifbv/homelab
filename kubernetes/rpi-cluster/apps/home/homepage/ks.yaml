@@ -10,6 +10,7 @@ spec:
     secretRef:
       name: flux-sops
   dependsOn:
+    - name: cluster-settings
     - name: metrics-server
   interval: 1h
   path: ./kubernetes/rpi-cluster/apps/home/homepage/app

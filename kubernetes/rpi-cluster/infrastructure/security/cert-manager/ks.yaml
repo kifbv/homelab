@@ -54,4 +54,5 @@ spec:
     secretRef:
       name: flux-sops
   dependsOn:
+    - name: cluster-settings
     - name: cert-manager-webhooks

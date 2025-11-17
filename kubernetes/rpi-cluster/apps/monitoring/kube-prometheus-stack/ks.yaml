@@ -44,6 +44,7 @@ spec:
     secretRef:
       name: flux-sops
   dependsOn:
+    - name: cluster-settings
     - name: kube-prometheus-stack-crds
     - name: cert-manager
     - name: rook-ceph-rbd
