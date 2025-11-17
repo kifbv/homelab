@@ -18,7 +18,7 @@ data:
 
       # Flux webhook receiver
       - hostname: flux-webhook.k8s-lab.dev
-        service: http://notification-controller.flux-system.svc.cluster.local:9292
+        service: http://webhook-receiver.flux-system.svc.cluster.local:80
 
       # Catch-all rule (required)
       - service: http_status:404
