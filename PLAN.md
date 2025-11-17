@@ -18,40 +18,50 @@ This document outlines the implementation plan for building an n8n-based automat
 
 ## Phase 1: Infrastructure Preparation (Week 1)
 
-### 1.1 Flux Webhook Receiver
+### 1.1 Flux Webhook Receiver ✅ COMPLETED
 **Goal**: Enable immediate reconciliation when n8n pushes to Git (15-30s vs 5-10min)
 
-- [ ] Generate HMAC webhook token and store in SOPS secret
-- [ ] Create Receiver resource (`notification.toolkit.fluxcd.io/v1`)
-- [ ] Create Service for webhook receiver (ClusterIP)
-- [ ] Add route to Cloudflare Tunnel: `flux-webhook.k8s-lab.dev` → `webhook-receiver.flux-system.svc.cluster.local:9292`
-- [ ] Create DNS record via external-dns annotation
-- [ ] Configure GitHub webhook pointing to `https://flux-webhook.k8s-lab.dev/hook/<token>`
-- [ ] Test webhook with manual Git push
+- [x] Generate HMAC webhook token and store in SOPS secret
+- [x] Create Receiver resource (`notification.toolkit.fluxcd.io/v1`)
+- [x] Create Service for webhook receiver (ClusterIP)
+- [x] Add route to Cloudflare Tunnel: `flux-webhook.k8s-lab.dev` → `webhook-receiver.flux-system.svc.cluster.local:80`
+- [x] Create DNS record via external-dns annotation
+- [x] Configure GitHub webhook pointing to `https://flux-webhook.k8s-lab.dev/hook/<token>`
+- [x] Test webhook with manual Git push
 
-**Files to create**:
-- `kubernetes/rpi-cluster/infrastructure/flux-webhook/ks.yaml`
-- `kubernetes/rpi-cluster/infrastructure/flux-webhook/app/receiver.yaml`
-- `kubernetes/rpi-cluster/infrastructure/flux-webhook/app/secret.sops.yaml`
-- `kubernetes/rpi-cluster/infrastructure/flux-webhook/app/service.yaml`
-- Update `kubernetes/rpi-cluster/infrastructure/network/cloudflared/app/config.yaml`
+**Files created**:
+- `kubernetes/rpi-cluster/infrastructure/flux-system/ks.yaml`
+- `kubernetes/rpi-cluster/infrastructure/flux-system/app/receiver.yaml`
+- `kubernetes/rpi-cluster/infrastructure/flux-system/app/secret.sops.yaml`
+- `kubernetes/rpi-cluster/infrastructure/flux-system/app/service.yaml`
+- Updated `kubernetes/rpi-cluster/infrastructure/network/cloudflared/app/config.yaml`
+
+**Key Issues & Solutions**:
+- **Token format**: Initial alphanumeric token failed validation. Must use Flux's method: `head -c 12 /dev/urandom | shasum | cut -d ' ' -f1` (40-char hex)
+- **Service confusion**: Used `notification-controller:9292` initially, but correct service is `webhook-receiver:80` (which forwards to port 9292)
+- **Cloudflared config reload**: ConfigMaps update automatically but cloudflared doesn't reload. Manual restart required: `kubectl -n network rollout restart deployment/cloudflared`
+- **Directory structure**: Placed in `flux-system/` dir following existing infrastructure pattern, not separate `flux-webhook/` dir
 
 ---
 
-### 1.2 Expose Docker Registry Publicly
-**Goal**: Allow n8n to push container images to registry from outside cluster
+### 1.2 Expose Docker Registry Publicly ✅ COMPLETED
+**Goal**: Allow external tools (GitHub Actions) to push container images to registry
 
-- [ ] Add Cloudflare Tunnel route: `registry.k8s-lab.dev` → `docker-registry.registry.svc.cluster.local:5000`
-- [ ] Create ExternalName service with external-dns annotation for DNS record
-- [ ] Verify existing n8n registry user credentials (check SOPS secrets in registry namespace)
-- [ ] Test registry push from outside cluster using n8n user credentials
-- [ ] Verify image pull from registry works
+- [x] Add Cloudflare Tunnel route: `registry.k8s-lab.dev` → `docker-registry.registry.svc.cluster.local:5000`
+- [x] Create ExternalName service with external-dns annotation for DNS record
+- [x] Verify existing n8n registry user credentials (username: `n8n`, password in SOPS)
+- [x] Test registry authentication from outside cluster
+- [x] Verify registry API responding correctly (HTTP 401 with Basic auth challenge)
 
-**Files to update**:
+**Files updated**:
 - `kubernetes/rpi-cluster/infrastructure/network/cloudflared/app/config.yaml`
-- `kubernetes/rpi-cluster/infrastructure/network/external-dns/app/registry-dns-service.yaml` (new)
+- `kubernetes/rpi-cluster/apps/registry/docker-registry/app/tunnel-service.yaml` (new)
+- `kubernetes/rpi-cluster/apps/registry/docker-registry/app/kustomization.yaml`
 
-**Note**: n8n registry user already exists - verify credentials and test authentication before proceeding.
+**Key Insights**:
+- **Internal vs External**: n8n (in-cluster) uses `http://docker-registry.registry.svc.cluster.local:5000`. External access via `https://registry.k8s-lab.dev` is for GitHub Actions workflows
+- **Authentication working**: Registry protected with htpasswd, n8n user credentials verified and tested successfully
+- **Cloudflared reload**: Same issue as 1.1 - manual restart required after config update
 
 ---
 
@@ -774,3 +784,4 @@ This document outlines the implementation plan for building an n8n-based automat
 - **n8n registry user already exists** - verify credentials in Phase 1.2 instead of creating new user
 - **Webapp code repository strategy** - Single repository recommended for homelab simplicity, can migrate to per-app repos later if needed
 - **Flux image automation** - Enables automatic manifest updates when new images are pushed, reducing manual intervention
+- **Cloudflared auto-reload** - ConfigMaps update automatically (~60s) but cloudflared doesn't reload. Consider implementing Reloader/Stakater or checksum annotations for automatic restarts (Future Enhancement)
