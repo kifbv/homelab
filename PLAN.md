@@ -115,13 +115,19 @@ This document outlines the implementation plan for building an n8n-based automat
 
 ---
 
-### 1.5 Wildcard DNS Route for Dynamic Apps
+### 1.5 Wildcard DNS Route for Dynamic Apps ✅ COMPLETED
 **Goal**: Enable `*.apps.k8s-lab.dev` routing to Cilium Gateway
 
-- [ ] Research Cloudflare Tunnel wildcard routing capabilities
-- [ ] Option A: Configure wildcard route in Cloudflared config: `*.apps.k8s-lab.dev` → Cilium Gateway LoadBalancer
-- [ ] Option B: Use HTTPRoute-level routing if wildcard not supported
-- [ ] Create Cilium Gateway for dynamic apps (if not using shared gateway)
+**Key Insights**:
+- **Cloudflare Tunnel supports wildcards**: Can use `*.subdomain.com` in ingress rules
+- **Reusing existing Gateway**: private-gateway already configured with `*.k8s-lab.dev`
+- **Namespace label required**: `networking.kubernetes.io/shared-gateway-access: "true"` for Gateway access
+- **noTLSVerify needed**: Gateway uses self-signed cert, cloudflared needs `noTLSVerify: true`
+
+- [x] Research Cloudflare Tunnel wildcard routing capabilities
+- [x] Configure wildcard route in Cloudflared config: `*.apps.k8s-lab.dev` → Cilium Gateway (192.168.5.250:443)
+- [x] Use existing private-gateway (no separate gateway needed)
+- [x] Add shared-gateway-access label to dynamic-apps namespace
 - [ ] Test routing with sample HTTPRoute
 
 **Files to update/create**:
