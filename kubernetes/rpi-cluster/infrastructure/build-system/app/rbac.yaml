@@ -1,0 +1,32 @@
+---
+# Role for managing build jobs
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: build-job-manager
+  namespace: build-system
+rules:
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["create", "get", "list", "watch", "delete"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+---
+# RoleBinding for n8n ServiceAccount
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: n8n-build-manager
+  namespace: build-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: build-job-manager
+subjects:
+  - kind: ServiceAccount
+    name: n8n
+    namespace: automation

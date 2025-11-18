@@ -9,3 +9,4 @@ resources:
   - ./database
   - ./flux-system
   - ./image-automation
+  - ./build-system
