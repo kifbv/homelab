@@ -36,25 +36,31 @@ spec:
             - |
               set -e
               echo "Setting up SSH configuration..."
-              mkdir -p /home/node/.ssh
-              cp /ssh-keys/id_ed25519 /home/node/.ssh/id_ed25519
-              cp /ssh-keys/known_hosts /home/node/.ssh/known_hosts
-              chmod 700 /home/node/.ssh
-              chmod 600 /home/node/.ssh/id_ed25519
-              chmod 644 /home/node/.ssh/known_hosts
+              mkdir -p /ssh-config/.ssh
+              cp /ssh-keys/id_ed25519 /ssh-config/.ssh/id_ed25519
+              cp /ssh-keys/known_hosts /ssh-config/.ssh/known_hosts
+              chmod 700 /ssh-config/.ssh
+              chmod 600 /ssh-config/.ssh/id_ed25519
+              chmod 644 /ssh-config/.ssh/known_hosts
 
               echo "Configuring Git..."
-              git config --global user.name "n8n automation"
-              git config --global user.email "n8n@${CLUSTER_DOMAIN}"
-              git config --global init.defaultBranch main
+              mkdir -p /ssh-config/.gitconfig.d
+              cat > /ssh-config/.gitconfig <<EOF
+              [user]
+                  name = n8n automation
+                  email = n8n@${CLUSTER_DOMAIN}
+              [init]
+                  defaultBranch = main
+              EOF
+              chmod 644 /ssh-config/.gitconfig
 
               echo "SSH and Git configured successfully"
           securityContext:
             runAsUser: 1000
             runAsNonRoot: true
           volumeMounts:
-            - name: data
-              mountPath: /home/node/.n8n
+            - name: ssh-config
+              mountPath: /ssh-config
             - name: ssh-keys
               mountPath: /ssh-keys
               readOnly: true
@@ -114,6 +120,12 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /home/node/.n8n
+            - name: ssh-config
+              mountPath: /home/node/.ssh
+              subPath: .ssh
+            - name: ssh-config
+              mountPath: /home/node/.gitconfig
+              subPath: .gitconfig
           resources:
             requests:
               cpu: 100m
@@ -137,6 +149,8 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: n8n-data
+        - name: ssh-config
+          emptyDir: {}
         - name: ssh-keys
           secret:
             secretName: n8n-git-ssh
