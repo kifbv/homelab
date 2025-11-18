@@ -1,5 +1,5 @@
 ---
-# Role for managing build jobs
+# Role for managing build jobs and querying registry
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -15,6 +15,9 @@ rules:
   - apiGroups: [""]
     resources: ["pods/log"]
     verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create"]
 ---
 # RoleBinding for n8n ServiceAccount
 apiVersion: rbac.authorization.k8s.io/v1

@@ -1,0 +1,47 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: registry-query
+  namespace: build-system
+  labels:
+    app: registry-query
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: registry-query
+  template:
+    metadata:
+      labels:
+        app: registry-query
+    spec:
+      containers:
+      - name: crane
+        image: gcr.io/go-containerregistry/crane:latest
+        command: ["/bin/sh"]
+        args:
+          - -c
+          - |
+            while true; do sleep 3600; done
+        env:
+          - name: REGISTRY
+            value: "docker-registry.registry.svc.cluster.local:5000"
+        volumeMounts:
+          - name: docker-config
+            mountPath: /root/.docker
+            readOnly: true
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            cpu: 100m
+            memory: 64Mi
+      volumes:
+        - name: docker-config
+          secret:
+            secretName: registry-credentials
+            items:
+              - key: .dockerconfigjson
+                path: config.json
