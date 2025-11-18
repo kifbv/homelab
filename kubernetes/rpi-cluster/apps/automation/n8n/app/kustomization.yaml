@@ -4,6 +4,7 @@ kind: Kustomization
 resources:
   - secret.sops.yaml
   - git-ssh-secret.sops.yaml
+  - git-ssh-webapps-secret.sops.yaml
   - serviceaccount.yaml
   - rbac.yaml
   - pvc.yaml

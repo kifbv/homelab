@@ -37,11 +37,35 @@ spec:
               set -e
               echo "Setting up SSH configuration..."
               mkdir -p /ssh-config/.ssh
-              cp /ssh-keys/id_ed25519 /ssh-config/.ssh/id_ed25519
-              cp /ssh-keys/known_hosts /ssh-config/.ssh/known_hosts
-              chmod 700 /ssh-config/.ssh
-              chmod 600 /ssh-config/.ssh/id_ed25519
+
+              # Copy homelab repository key
+              cp /ssh-keys-homelab/id_ed25519 /ssh-config/.ssh/id_ed25519_homelab
+              chmod 600 /ssh-config/.ssh/id_ed25519_homelab
+
+              # Copy webapps repository key
+              cp /ssh-keys-webapps/id_ed25519 /ssh-config/.ssh/id_ed25519_webapps
+              chmod 600 /ssh-config/.ssh/id_ed25519_webapps
+
+              # Copy known_hosts (same for both)
+              cp /ssh-keys-homelab/known_hosts /ssh-config/.ssh/known_hosts
               chmod 644 /ssh-config/.ssh/known_hosts
+
+              # Create SSH config to use appropriate keys for each repo
+              cat > /ssh-config/.ssh/config <<EOF
+              Host github.com-homelab
+                  HostName github.com
+                  User git
+                  IdentityFile ~/.ssh/id_ed25519_homelab
+                  IdentitiesOnly yes
+
+              Host github.com-webapps
+                  HostName github.com
+                  User git
+                  IdentityFile ~/.ssh/id_ed25519_webapps
+                  IdentitiesOnly yes
+              EOF
+              chmod 600 /ssh-config/.ssh/config
+              chmod 700 /ssh-config/.ssh
 
               echo "Configuring Git..."
               mkdir -p /ssh-config/.gitconfig.d
@@ -61,8 +85,11 @@ spec:
           volumeMounts:
             - name: ssh-config
               mountPath: /ssh-config
-            - name: ssh-keys
-              mountPath: /ssh-keys
+            - name: ssh-keys-homelab
+              mountPath: /ssh-keys-homelab
+              readOnly: true
+            - name: ssh-keys-webapps
+              mountPath: /ssh-keys-webapps
               readOnly: true
       containers:
         - name: n8n
@@ -151,7 +178,11 @@ spec:
             claimName: n8n-data
         - name: ssh-config
           emptyDir: {}
-        - name: ssh-keys
+        - name: ssh-keys-homelab
           secret:
             secretName: n8n-git-ssh
+            defaultMode: 0600
+        - name: ssh-keys-webapps
+          secret:
+            secretName: n8n-git-ssh-webapps
             defaultMode: 0600
