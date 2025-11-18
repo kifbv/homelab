@@ -1,0 +1,124 @@
+---
+# BuildKit Job Template for n8n Automation
+# This template is used by n8n workflows to build and push webapp images
+#
+# n8n should substitute the following placeholders:
+#   - ${WEBAPP_NAME}: Name of the webapp (e.g., "app-example")
+#   - ${GIT_REPO_URL}: Git repository URL (e.g., "https://github.com/kifbv/homelab-webapps.git")
+#   - ${GIT_SUBDIRECTORY}: Subdirectory containing the app (e.g., "_example" or "apps/my-app")
+#   - ${IMAGE_TAG}: Full image tag (e.g., "registry.k8s-lab.dev/webapp/app-example:v1.0.0")
+#   - ${JOB_NAME}: Unique job name (e.g., "build-app-example-1234567890")
+#
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ${JOB_NAME}
+  namespace: build-system
+  labels:
+    app.kubernetes.io/name: buildkit
+    app.kubernetes.io/component: builder
+    webapp: ${WEBAPP_NAME}
+spec:
+  ttlSecondsAfterFinished: 600
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: buildkit
+        webapp: ${WEBAPP_NAME}
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: buildkit
+        image: docker.io/moby/buildkit:v0.18.2
+        command:
+        - sh
+        - -c
+        - |
+          set -e
+          echo "Starting BuildKit daemon..."
+          buildkitd --addr unix:///run/buildkit/buildkitd.sock &
+          BUILDKIT_PID=$!
+
+          # Wait for BuildKit to be ready
+          echo "Waiting for BuildKit to be ready..."
+          for i in $(seq 1 30); do
+            if buildctl --addr unix:///run/buildkit/buildkitd.sock debug info >/dev/null 2>&1; then
+              echo "BuildKit is ready"
+              break
+            fi
+            if [ $i -eq 30 ]; then
+              echo "BuildKit failed to start within 30 seconds"
+              kill $BUILDKIT_PID
+              exit 1
+            fi
+            sleep 1
+          done
+
+          echo "Building image ${IMAGE_TAG}..."
+          buildctl --addr unix:///run/buildkit/buildkitd.sock build \
+            --frontend=dockerfile.v0 \
+            --local context=/workspace \
+            --local dockerfile=/workspace \
+            --output type=image,name=${IMAGE_TAG},push=true,registry.insecure=true
+
+          echo "Build completed successfully"
+          kill $BUILDKIT_PID
+        workingDir: /workspace
+        securityContext:
+          # BuildKit requires privileged mode for bind mounts
+          privileged: true
+        env:
+          - name: BUILDKIT_HOST
+            value: unix:///run/buildkit/buildkitd.sock
+        volumeMounts:
+          - name: workspace
+            mountPath: /workspace
+          - name: docker-config
+            mountPath: /root/.docker
+            readOnly: true
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
+          limits:
+            cpu: 2000m
+            memory: 2Gi
+      initContainers:
+      - name: git-clone
+        image: docker.io/alpine/git:latest
+        command:
+        - sh
+        - -c
+        - |
+          set -e
+          echo "Cloning repository ${GIT_REPO_URL}..."
+          git clone --depth 1 ${GIT_REPO_URL} /tmp/repo
+
+          echo "Copying ${GIT_SUBDIRECTORY} to workspace..."
+          cp -r /tmp/repo/${GIT_SUBDIRECTORY}/* /workspace/
+
+          echo "Workspace contents:"
+          ls -la /workspace
+        volumeMounts:
+          - name: workspace
+            mountPath: /workspace
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+        resources:
+          requests:
+            cpu: 10m
+            memory: 64Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+      volumes:
+        - name: workspace
+          emptyDir: {}
+        - name: docker-config
+          secret:
+            secretName: registry-credentials
+            items:
+              - key: .dockerconfigjson
+                path: config.json

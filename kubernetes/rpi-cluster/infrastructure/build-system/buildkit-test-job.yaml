@@ -1,0 +1,74 @@
+---
+# Test Job to validate BuildKit works on ARM64 cluster
+# This builds the example webapp from homelab-webapps repository
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: buildkit-test
+  namespace: build-system
+spec:
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: buildkit
+        image: docker.io/moby/buildkit:v0.18.2
+        command:
+        - sh
+        - -c
+        - |
+          buildkitd --addr unix:///run/buildkit/buildkitd.sock &
+          BUILDKIT_PID=$!
+          sleep 5
+          buildctl --addr unix:///run/buildkit/buildkitd.sock build \
+            --frontend=dockerfile.v0 \
+            --local context=/workspace \
+            --local dockerfile=/workspace \
+            --output type=image,name=registry.k8s-lab.dev/webapp/buildkit-test:v1.0.0,push=true,registry.insecure=true
+          kill $BUILDKIT_PID
+        workingDir: /workspace
+        securityContext:
+          # Run as privileged for BuildKit to perform bind mounts
+          privileged: true
+        env:
+          - name: BUILDKIT_HOST
+            value: unix:///run/buildkit/buildkitd.sock
+        volumeMounts:
+          - name: workspace
+            mountPath: /workspace
+          - name: docker-config
+            mountPath: /root/.docker
+            readOnly: true
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
+          limits:
+            cpu: 2000m
+            memory: 2Gi
+      initContainers:
+      - name: git-clone
+        image: docker.io/alpine/git:latest
+        command:
+        - sh
+        - -c
+        - |
+          git clone --depth 1 https://github.com/kifbv/homelab-webapps.git /tmp/repo
+          cp -r /tmp/repo/_example/* /workspace/
+          ls -la /workspace
+        volumeMounts:
+          - name: workspace
+            mountPath: /workspace
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+      volumes:
+        - name: workspace
+          emptyDir: {}
+        - name: docker-config
+          secret:
+            secretName: registry-credentials
+            items:
+              - key: .dockerconfigjson
+                path: config.json
