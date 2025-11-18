@@ -28,7 +28,6 @@ spec:
         - --destination=registry.k8s-lab.dev/dynamic-apps/{{ APP_NAME }}:{{ VERSION }}
         - --cache=true
         - --cache-repo=registry.k8s-lab.dev/dynamic-apps/cache
-        - --skip-tls-verify
         # For debugging, add: --verbosity=debug
       volumeMounts:
         - name: workspace
@@ -126,8 +125,9 @@ spec:
 ---
 # Security Notes:
 #
-# 1. --skip-tls-verify: Required because registry uses self-signed cert
-#    - Alternative: Mount CA certificate and use --ca-certificate
+# 1. HTTPS Registry: Uses registry.k8s-lab.dev via Cloudflare Tunnel
+#    - Proper TLS encryption (no --skip-tls-verify needed)
+#    - Works with CRI-O without insecure registry configuration
 #
 # 2. ServiceAccount: Uses dynamic-apps SA with imagePullSecrets
 #    - Registry credentials automatically mounted
