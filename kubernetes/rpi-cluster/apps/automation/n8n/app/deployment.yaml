@@ -24,6 +24,40 @@ spec:
         fsGroup: 1000
         runAsUser: 1000
         runAsNonRoot: true
+      initContainers:
+        - name: setup-ssh
+          image: docker.io/n8nio/n8n:latest
+          env:
+            - name: CLUSTER_DOMAIN
+              value: "${CLUSTER_DOMAIN}"
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              echo "Setting up SSH configuration..."
+              mkdir -p /home/node/.ssh
+              cp /ssh-keys/id_ed25519 /home/node/.ssh/id_ed25519
+              cp /ssh-keys/known_hosts /home/node/.ssh/known_hosts
+              chmod 700 /home/node/.ssh
+              chmod 600 /home/node/.ssh/id_ed25519
+              chmod 644 /home/node/.ssh/known_hosts
+
+              echo "Configuring Git..."
+              git config --global user.name "n8n automation"
+              git config --global user.email "n8n@${CLUSTER_DOMAIN}"
+              git config --global init.defaultBranch main
+
+              echo "SSH and Git configured successfully"
+          securityContext:
+            runAsUser: 1000
+            runAsNonRoot: true
+          volumeMounts:
+            - name: data
+              mountPath: /home/node/.n8n
+            - name: ssh-keys
+              mountPath: /ssh-keys
+              readOnly: true
       containers:
         - name: n8n
           image: docker.io/n8nio/n8n:latest
@@ -103,3 +137,7 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: n8n-data
+        - name: ssh-keys
+          secret:
+            secretName: n8n-git-ssh
+            defaultMode: 0600
