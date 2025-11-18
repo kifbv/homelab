@@ -17,12 +17,19 @@ spec:
         app: registry-query
     spec:
       containers:
-      - name: crane
-        image: gcr.io/go-containerregistry/crane:latest
+      - name: registry-tools
+        image: docker.io/alpine:latest
         command: ["/bin/sh"]
         args:
           - -c
           - |
+            # Install crane and curl
+            apk add --no-cache curl
+            wget -O /tmp/crane.tar.gz https://github.com/google/go-containerregistry/releases/download/v0.20.2/go-containerregistry_Linux_arm64.tar.gz
+            tar -xzf /tmp/crane.tar.gz -C /usr/local/bin crane
+            chmod +x /usr/local/bin/crane
+
+            # Keep container running
             while true; do sleep 3600; done
         env:
           - name: REGISTRY
@@ -34,10 +41,10 @@ spec:
         resources:
           requests:
             cpu: 10m
-            memory: 32Mi
+            memory: 64Mi
           limits:
             cpu: 100m
-            memory: 64Mi
+            memory: 128Mi
       volumes:
         - name: docker-config
           secret:
