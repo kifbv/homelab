@@ -24,7 +24,7 @@ spec:
           type: RuntimeDefault
       containers:
       - name: registry-tools
-        image: docker.io/alpine/crane:v0.21.0
+        image: gcr.io/go-containerregistry/crane:latest
         command: ["/bin/sh"]
         args:
           - -c
