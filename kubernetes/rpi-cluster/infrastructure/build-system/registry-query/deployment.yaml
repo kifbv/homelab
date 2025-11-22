@@ -24,8 +24,8 @@ spec:
           type: RuntimeDefault
       containers:
       - name: registry-tools
-        image: gcr.io/go-containerregistry/crane:latest
-        command: ["/bin/sh"]
+        image: gcr.io/go-containerregistry/crane:debug
+        command: ["/busybox/sh"]
         args:
           - -c
           - |
