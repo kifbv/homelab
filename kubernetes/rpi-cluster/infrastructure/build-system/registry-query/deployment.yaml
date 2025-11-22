@@ -24,17 +24,11 @@ spec:
           type: RuntimeDefault
       containers:
       - name: registry-tools
-        image: docker.io/alpine:latest
+        image: docker.io/alpine/crane:v0.21.0
         command: ["/bin/sh"]
         args:
           - -c
           - |
-            # Install crane and curl
-            apk add --no-cache curl
-            wget -O /tmp/crane.tar.gz https://github.com/google/go-containerregistry/releases/download/v0.20.2/go-containerregistry_Linux_arm64.tar.gz
-            tar -xzf /tmp/crane.tar.gz -C /usr/local/bin crane
-            chmod +x /usr/local/bin/crane
-
             # Keep container running
             while true; do sleep 3600; done
         env:
@@ -50,7 +44,7 @@ spec:
           readOnlyRootFilesystem: false
         volumeMounts:
           - name: docker-config
-            mountPath: /root/.docker
+            mountPath: /.docker
             readOnly: true
         resources:
           requests:
