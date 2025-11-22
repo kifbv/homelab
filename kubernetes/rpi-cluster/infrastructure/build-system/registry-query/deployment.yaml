@@ -16,6 +16,12 @@ spec:
       labels:
         app: registry-query
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        fsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - name: registry-tools
         image: docker.io/alpine:latest
@@ -34,6 +40,14 @@ spec:
         env:
           - name: REGISTRY
             value: "docker-registry.registry.svc.cluster.local:5000"
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 65534
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: false
         volumeMounts:
           - name: docker-config
             mountPath: /root/.docker
